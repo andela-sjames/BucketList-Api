@@ -5,7 +5,9 @@ from flask.ext.httpauth import HTTPBasicAuth
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
+from flask_marshmallow import Marshmallow
 #from Flask_api.errors import bad_request
+
 
 # initialization
 app = Flask(__name__)
@@ -14,14 +16,23 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 
 # extensions
+ma = Marshmallow(app)
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
+####################################################################
 class User(db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, unique=True)
     username = db.Column(db.String(32), index=True)
     password_hash = db.Column(db.String(64))
+    email = db.Column(db.String(32), unique=True)
+
+    lists = db.relationship('List', backref='users', lazy='dynamic')
+
+    def __repr__(self):
+        return "<User(username='%s', email='%s')>" % (self.username,
+         self.email)
 
     def hash_password(self, password):
         self.password_hash = pwd_context.encrypt(password)
@@ -46,6 +57,32 @@ class User(db.Model):
         return user
 
 #######################################################################
+class List(db.Model):
+    __tablename__ = 'lists'
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    name = db.Column(db.String(32))
+    date_created = db.Column(db.DateTime)
+    date_modified = db.Column(db.DateTime)   
+    created_by = db.Column(db.String(32))
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    items = db.relationship('Item', backref='lists', lazy='dynamic')
+
+
+
+################################################################
+
+class Item(db.Model):
+    __tablename__ = 'items'
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    name = db.Column(db.String(32))
+    date_created = db.Column(db.DateTime)
+    date_modified = db.Column(db.DateTime)   
+    done = db.Column(db.Boolean) 
+
+    list_id = db.Column(db.Integer, db.ForeignKey('lists.id'))
+
+##########################################################################
 
 def bad_request(message):
     response = jsonify({'status': 400, 'error': 'bad request',
