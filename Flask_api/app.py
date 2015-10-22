@@ -1,6 +1,10 @@
+########################## CONFIGURATIONS AND SETTINGS #################
+
 import os
+import datetime
 from flask import Flask, abort, request, jsonify, g, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 from flask.ext.httpauth import HTTPBasicAuth
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer
@@ -12,21 +16,22 @@ from flask_marshmallow import Marshmallow
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'qwertyuiopasdfghjklzxcvbnm'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bucket.sqlite'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 
 # extensions
-ma = Marshmallow(app)
 db = SQLAlchemy(app)
+ma = Marshmallow(app)
 auth = HTTPBasicAuth()
 
-####################################################################
+################### MODELS  #######################
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, unique=True)
-    username = db.Column(db.String(32), index=True)
-    password_hash = db.Column(db.String(64))
-    email = db.Column(db.String(32), unique=True)
+    username = db.Column(db.String(64), index=True)
+    password_hash = db.Column(db.String(128))
+    email = db.Column(db.String(128), unique=True)
+    date_created = db.Column(db.DateTime, auto_now_add=True)
 
     lists = db.relationship('List', backref='users', lazy='dynamic')
 
@@ -56,33 +61,68 @@ class User(db.Model):
         user = User.query.get(data['id'])
         return user
 
-#######################################################################
+
 class List(db.Model):
     __tablename__ = 'lists'
     id = db.Column(db.Integer, primary_key=True, unique=True)
-    name = db.Column(db.String(32))
-    date_created = db.Column(db.DateTime)
+    name = db.Column(db.String(64))
+    date_created = db.Column(db.DateTime, auto_now_add=True)
     date_modified = db.Column(db.DateTime)   
-    created_by = db.Column(db.String(32))
+    created_by = db.Column(db.String(64))
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     items = db.relationship('Item', backref='lists', lazy='dynamic')
 
 
 
-################################################################
 
 class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True, unique=True)
-    name = db.Column(db.String(32))
-    date_created = db.Column(db.DateTime)
+    name = db.Column(db.String(64))
+    date_created = db.Column(db.DateTime, auto_now_add=True)
     date_modified = db.Column(db.DateTime)   
     done = db.Column(db.Boolean) 
 
     list_id = db.Column(db.Integer, db.ForeignKey('lists.id'))
+    lists = db.relationship('List', backref='items', lazy='dynamic')
 
-##########################################################################
+############### SCHEMA #############################
+
+class UserSchema(ma.Schema):
+
+    class Meta:
+        # Fields to expose
+        fields = ('id', 'username', 'email', 'date_created')
+        ordered = True
+
+
+class ListSchema(ma.Schema):
+    
+    class Meta:
+
+        items = fields.Nested(ItemSchema)
+        fields = ('id', 'name','items', 'date_created', 'date_modified', 'created_by',)
+        ordered = True
+
+class ItemSchema(ma.Schema):
+    
+    class Meta:
+
+        fields = ('id', 'name', 'date_created', 'date_modified', 'done')
+        ordered = True
+
+
+
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+list_schema = ListSchema()
+lists_schema = ListSchema(many = True)
+item_schema = ItemSchema()
+Items_Schema = ItemSchema(many = True)
+
+###################### ERRORS #######################
+
 
 def bad_request(message):
     response = jsonify({'status': 400, 'error': 'bad request',
@@ -90,6 +130,7 @@ def bad_request(message):
     response.status_code = 400
     return response
 
+###################### GLOBAL METHODS ##############################
 
 @auth.verify_password
 def verify_password(username_or_token, password):
@@ -104,6 +145,7 @@ def verify_password(username_or_token, password):
     return True
 
 
+##################  API ACCES POINTS HERE  #############################
 
 @app.route('/auth/login', methods=['POST'])
 def new_user():
@@ -136,7 +178,7 @@ def get_auth_token():
     token = g.user.generate_auth_token(600)
     return jsonify({'token': token.decode('ascii'), 'duration': 600})
 
-
+###################### RUN ################################
 
 if __name__ == '__main__':
     if not os.path.exists('db.sqlite'):
