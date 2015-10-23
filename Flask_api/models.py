@@ -1,3 +1,35 @@
+
+class BucketList(db.Model):
+    __tablename__ = 'Bucketlists'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    date_created = db.Column(db.DateTime, default=datetime.datetime.now())
+    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
+    created_by = db.Column(db.String(64))
+
+    #itemdata=db.relationship('Item')
+
+
+class Item(db.Model):
+    __tablename__ = 'items'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    date_created = db.Column(db.DateTime,  default=datetime.datetime.utcnow())
+    date_modified = db.Column(db.DateTime, default=datetime.datetime.utcnow(), onupdate=datetime.datetime.now())   
+    done = db.Column(db.Boolean, default=False) 
+
+    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'))
+    bucketlist = db.relationship('BucketList', backref=db.backref('items', lazy='joined'), lazy='dynamic', uselist=True)
+
+
+
+
+@auth.login_required
+
+
+
+
+
 class UserSchema(ma.Schema):
 
     class Meta:
