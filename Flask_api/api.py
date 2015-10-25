@@ -3,8 +3,6 @@
 
 
 
-
-###################### NEW API END POINT ############################
 @app.route('/auth/login', methods=['POST'])
 def new_user():
     username = request.json.get('username', ' ')

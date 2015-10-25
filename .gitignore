@@ -42,7 +42,8 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
-
+# migrations
+migrations
 # Translations
 *.mo
 *.pot
