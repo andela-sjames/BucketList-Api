@@ -9,22 +9,47 @@ from flask.ext.httpauth import HTTPBasicAuth
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
-from flask_marshmallow import Marshmallow
+#from flask_marshmallow import Marshmallow
 from collections import OrderedDict
+from flask.ext.script import Manager
+from flask.ext.migrate import Migrate, MigrateCommand
 #from Flask_api.errors import bad_request
+########################################################
 
+#The import statements are:
+
+########################################################
 
 # initialization
 app = Flask(__name__)
-ma = Marshmallow(app)
+#ma = Marshmallow(app)
 
 app.config['SECRET_KEY'] = 'qwertyuiop'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bucket.sqlite'
+app.config['DEBUG'] = True
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://Administrator:administrator@localhost/bucketlist'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+
+#postgresql://Administrator:administrator@localhost/bucketlist
 
 # extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
+#####################################################
+
+# initialize the 'CLI facing' flask extensions on the created app:
+
+manager = Manager(app)
+migrate = Migrate(app, db)
+
+# add the flask-script commands to be run from the CLI:---to remove later
+manager.add_command('db', MigrateCommand)
+
+@manager.command
+def test():
+   """Discovers and runs unit tests"""
+   import unittest
+   tests = unittest.TestLoader().discover('tests')
+   unittest.TextTestRunner(verbosity=2).run(tests)
 
 ################### MODELS  #######################
 class User(db.Model):
@@ -33,7 +58,16 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     password_hash = db.Column(db.String(128))
     date_created = db.Column(db.DateTime, default=datetime.datetime.now())
+    bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
 
+
+    def to_json(self):
+
+        return {
+            "id": self.id,
+            "username": self.username,
+            "date_created": self.date_created,
+        }
 
     def __repr__(self):
         return "<User(username='%s', email='%s')>" % (self.username,
@@ -69,59 +103,48 @@ class BucketList(db.Model):
     date_created = db.Column(db.DateTime, default=datetime.datetime.now())
     date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
     created_by = db.Column(db.String(64))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan")
+
+
+    #method to be defined here...
+
+    def to_json(self):
+        """Converts model object into dict to ease Serialization
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "items": [row.to_json() for row in self.items],
+            "date_created": self.date_created,
+            "date_modified": self.date_modified,
+            "created_by": self.created_by,
+        }
 
 
 
 class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
+    name = db.Column(db.Text(64))
     date_created = db.Column(db.DateTime,  default=datetime.datetime.now())
     date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
     done = db.Column(db.Boolean, default=False) 
 
-    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'))
-    bucketlist = db.relationship('BucketList', backref=db.backref('items', lazy='dynamic'))
-############### SCHEMA #############################
-
-class UserSchema(ma.Schema):
-
-    class Meta:
-        # Fields to expose
-        fields = ('id', 'username','date_created')
-        #ordered = True
-        
-
-class BucketListSchema(ma.Schema):
+    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
     
-    class Meta:
-
-        fields = ('id', 'name','items', 'date_created', 'date_modified', 'created_by')
-        #ordered = True
-        
-class ItemSchema(ma.Schema):
-    
-    class Meta:
-
-        done = ma.Boolean(attribute='done', missing=False)
-        bucketlist=ma.Nested(BucketListSchema, many=True)
-        fields = ('id', 'name', 'bucketlist','date_created', 'date_modified', 'done')
-        #ordered = True    
 
 
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
-list_schema = BucketListSchema()
-lists_schema = BucketListSchema(many = True)
-item_schema = ItemSchema()
-items_schema = ItemSchema(many = True)
-################### NEW API ENTRY POINT ##################
-
-
-
-
-
+    def to_json(self):
+        """Converts model object into dict to ease Serialization
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "date_created": self.date_created,
+            "date_modified": self.date_modified,
+            "done": self.done,
+        }
 
 
 
@@ -158,6 +181,13 @@ def verify_password(username_or_token, password):
     return True
 
 
+def jboolify(d):
+    if d.done == True:
+        d.done = 'true'
+    else:
+        d.done = 'false'
+    return d
+
 ##################  API ACCESS POINTS HERE  #############################
 
 
@@ -167,7 +197,7 @@ def verify_password(username_or_token, password):
 def new_user():
     username = request.json.get('username', ' ')
     password = request.json.get('password', ' ')
-    if username is None or password is None:
+    if not username  or not password:
         return bad_request('Missing arguments/parameters given')
     if User.query.filter_by(username=username).first() is not None:
         return bad_request('User already exists')
@@ -176,22 +206,24 @@ def new_user():
     db.session.add(user)
     db.session.commit()
     user = User.query.get(user.id)
-    result = user_schema.dump(user)
+    #user.to_json()
     token = user.generate_auth_token(450000)
-    return (jsonify({'user': result.data, 'token': token.decode('ascii'), 'duration': 'expires on user logout' }), 201)
-
+    return (jsonify({'user': user.to_json(), 'token': token.decode('ascii'), 'duration': 'expires on user logout' }), 201)
 
 
 @app.route("/bucketlists", methods=['GET','POST'])
+@auth.login_required
 def create_and_getbucketlist():
 
     if request.method == 'GET':
 
-        bucketlist = BucketList.query.get.all()
-        Bucketlist_result = lists_schema.dump(bucketlists)
-        item_result=item_schema.dump(bucketlist.items.all())
-        return jsonify({'Bucketlist':Bucketlist_result.data, 'items': item_result.data })
+        allbucketlist = BucketList.query.all()
+        if not allbucketlist:
+            return jsonify({ 'message':'No bucketlist to display' })
 
+        return jsonify({'bucketlist':[bucketlist.to_json() for bucketlist in allbucketlist]})
+
+        
 
     if request.method == 'POST':
 
@@ -199,103 +231,121 @@ def create_and_getbucketlist():
         if not json_data['name']:
             return bad_request('No input data provided')
 
-        bucketList = BucketList(name=json_data['name'],created_by=g.user.username)
+        bucketList = BucketList(name=json_data['name'],created_by=g.user.username, user_id=g.user.id)
         db.session.add(bucketList)
         db.session.commit()
-        bucketid=BucketList.query.get(bucketList.id)
-        Bucketlist_result = lists_schema.dump(bucketid)
-        item_result=item_schema.dump(bucketlist.items.all())
-        return jsonify({'Bucketlist':Bucketlist_result.data, 'items': item_result.data })
 
+        bucketid = BucketList.query.get(bucketList.id)
+        return jsonify({'bucketlist':bucketid.to_json()})
+        
 
-@app.route("/bucketlists/<id>", methods=['GET', 'PUT', 'DELETE'])#get single bucketlist item
+@app.route("/bucketlists/<int:id>", methods=['GET', 'PUT', 'DELETE'])
+@auth.login_required #get single bucketlist item
 def get_delete_putbucketlist(id):
 
+    bucketlist = BucketList.query.get(id)
+    if not bucketlist:
+            return not_found('bucket list with id:{} was not found' .format(id))
+
     if request.method == 'GET':
-        try:
-            bucketlist = BucketList.query.get(id)
-        except IntegrityError:
-            return not_found('bucket list with id:{} was not found' .format(id))
-        Bucketlist_result = list_schema.dump(bucketlist)
-        item_result=item_schema.dump(bucketlist.items.all())
-        return jsonify({'Bucketlist':Bucketlist_result.data, 'items': item_result.data })
 
+        if bucketlist:
+            return jsonify({'bucketlist':bucketlist.to_json()})
+        
     if request.method == 'PUT':
+        
+        if bucketlist:
+            json_data = request.get_json()
+            bucketlist.name=json_data['name']
+            db.session.add(bucketlist)
+            db.session.commit()
+            bucket=BucketList.query.get(id)
 
-        try:
-            bucketlist = BucketList.query.get(id)
-        except IntegrityError:
-            return not_found('bucket list with id:{} was not found' .format(id))
+            return jsonify({'bucketlist':bucketlist.to_json()})
 
-        bucketlist.name=json_data['name']
-        db.session.add(bucketlist)
-        db.session.commit()
-        bucket=BucketList.query.get(id)
-
-        Bucketlist_result = list_schema.dump(bucket)
-        item_result=item_schema.dump(bucket.items.all())
-        return jsonify({'Bucketlist':Bucketlist_result.data, 'items': item_result.data })
-
+        
     if request.method == 'DELETE':
 
-        try:
-            bucketlist = BucketList.query.get(id)
-        except IntegrityError:
-            return not_found('bucket list already deleted')
+        if bucketlist:
+            db.session.add(bucketlist)
+            db.session.delete(bucketlist)
+            db.session.commit()
 
-        db.session.add(bucketlist)
-        db.session.add(bucketlist.items.all())
-        db.session.delete(bucketlist)
-        db.session.delete(bucketlist.items.all())
-        db.session.commit()
+            return jsonify({'message': 'bucketlist successfully deleted'})
 
-        return jsonify({'message': 'bucketlist has successfully been deleted'})
+        
 
+@app.route("/bucketlists/<int:id>/items", methods=['POST'])
+@auth.login_required #create item in bucketlist
+def addnew_bucketlistitem(id):
 
-@app.route("/bucketlists/<id>/items", methods=["POST"])#create item in bucketlist
-def new_item(id):
+    bucketlist = BucketList.query.get(id)
     json_data = request.get_json()
     if not json_data:
         return bad_request('No or incomplete input data provided')
     
+    if not bucketlist:
+        return bad_request('bucket list with id:{} was not found' .format(id))
+    name, done = json_data['name'], json_data['done']
+    
+    if done == 'TRUE' or 'true':        
+        item = Item(name=name, done=True)
+    else:
+        item =Item(name=name,done=False)
+        
+    item.bucketlist_id=bucketlist.id
+    db.session.add(item)
+    db.session.commit()
+    
+    item_added=Item.query.get(item.id)
+    json_boolify_item = jboolify(item_added)
+    return jsonify({'Item':json_boolify_item.to_json()})
+
+@app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
+@auth.login_required
+def delete_and_update(id, item_id):
+
+    
     bucketlist = BucketList.query.get(id)
     if not bucketlist:
         return bad_request('bucket list with id:{} was not found' .format(id))
+    
+    item =Item.query.get(item_id)
+    if not item:
+            return bad_request('bucket list with id:{} was not found' .format(item_id))
 
-    db.session.add(bucketlist)
-
-    #create new item
-    name = json_data['name']
-    done = True if json_data['done'] == 'true' or 'True' or 'TRUE' else False
-    item = Item(name =name,done=done)
-
-    db.session.add(item)
-    db.session.commit()
-
-    result = item_schema.dump(Item.query.get(item.id))
-    return jsonify({"message": "Created new item.",
-                    "items": result.data})
-
-
+    if request.method == 'PUT':
+        if item:
+            if item.bucketlist_id == bucketlist.id:
+                json_data = request.get_json()
+                name, done = json_data['name'], json_data['done']
         
-###############################################################
-@app.route('/auth/users/<int:id>')
-def get_user(id):
-    user = User.query.get(id)
-    if not user:
-        abort(400)
-    return jsonify({'username': user.username, 'date_created': user.date_created })
+                if done == 'TRUE' or 'true':        
+                    item = Item(name=name, done=True)
+                else:
+                    item =Item(name=name,done=False)
+
+                item.bucketlist_id=bucketlist.id
+                db.session.add(item)
+                db.session.commit()
+
+                responseitem = jboolify(Item.query.get(item.id))
+                return jsonify({'Item':responseitem.to_json()})
+        else:
+            return bad_request('item not related to bucketlist')
 
 
-@app.route('/auth/token', methods=['POST'])
-#@auth.login_required
-def get_auth_token():
-    token = g.user.generate_auth_token(3600)
-    return jsonify({'token': token.decode('ascii'), 'duration': 3600})
+    if request.method == 'DELETE':
+        if item:
+
+            db.session.add(item)
+            db.session.delete(item)
+            db.session.commit()
+
+        return jsonify({'message': 'bucketlist successfully deleted'})
+
 
 ###################### RUN ################################
 
 if __name__ == '__main__':
-    if not os.path.exists('db.sqlite'):
-        db.create_all()
-    app.run(debug=True)
+    manager.run()

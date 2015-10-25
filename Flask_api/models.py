@@ -14,12 +14,12 @@ class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
-    date_created = db.Column(db.DateTime,  default=datetime.datetime.utcnow())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.utcnow(), onupdate=datetime.datetime.now())   
+    date_created = db.Column(db.DateTime,  default=datetime.datetime.now())
+    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
     done = db.Column(db.Boolean, default=False) 
 
-    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'))
-    bucketlist = db.relationship('BucketList', backref=db.backref('items', lazy='joined'), lazy='dynamic', uselist=True)
+    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
+    bucketlist = db.relationship('BucketList', backref=db.backref('items', lazy='dynamic'))
 
 
 
@@ -60,30 +60,12 @@ class ItemSchema(ma.Schema):
         ordered = True
 
 #####################################################
+def list_object_transform(list_data):
+    result_data = []
+    for item in list_data:
+        result_set = item.to_json()
+        result_data.append(result_set)
+    return result_data
 
-class UserSchema(ma.Schema):
-    class Meta:
-        # Fields to expose
-        fields = ('email', 'date_created', '_links')
-        ordered = True
-    # Smart hyperlinking
-    _links = ma.Hyperlinks({
-        'self': ma.URLFor('author_detail', id='<id>'),
-        'collection': ma.URLFor('authors')
-    })
 
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
 
-@app.route('/api/users/')
-def users():
-    all_users = User.all() # make your python query
-    result = users_schema.dump(all_users) # serialize your query
-    return jsonify(result.data) #jsonify it
-    # OR
-    # return user_schema.jsonify(all_users)
-
-@app.route('/api/users/<id>')
-def user_detail(id):
-    user = User.get(id) # query database
-    return user_schema.jsonify(user) # jsonify it
