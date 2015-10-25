@@ -28,6 +28,8 @@ app.config['SECRET_KEY'] = 'qwertyuiop'
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://Administrator:administrator@localhost/bucketlist'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+app.config['PERPAGE_MIN_LIMIT'] = 20
+app.config['PERPAGE_MAX_LIMIT'] = 100
 
 #postgresql://Administrator:administrator@localhost/bucketlist
 
@@ -57,7 +59,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
     password_hash = db.Column(db.String(128))
-    date_created = db.Column(db.DateTime, default=datetime.datetime.now())
+    date_created = db.Column(db.DateTime, default=datetime.datetime.utcnow())
     bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
 
 
@@ -66,7 +68,7 @@ class User(db.Model):
         return {
             "id": self.id,
             "username": self.username,
-            "date_created": self.date_created,
+            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
     def __repr__(self):
@@ -101,23 +103,23 @@ class BucketList(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
     date_created = db.Column(db.DateTime, default=datetime.datetime.now())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
+    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.utcnow())   
     created_by = db.Column(db.String(64))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan")
+    items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan",lazy='dynamic')
 
 
     #method to be defined here...
-
+    #"items": [row.to_json() for row in self.items],
     def to_json(self):
         """Converts model object into dict to ease Serialization
         """
         return {
             "id": self.id,
             "name": self.name,
-            "items": [row.to_json() for row in self.items],
-            "date_created": self.date_created,
-            "date_modified": self.date_modified,
+            "items_count": len(self.items.all()),
+            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+            "date_modified": self.date_modified.strftime("%Y-%m-%d %H:%M:%S"),
             "created_by": self.created_by,
         }
 
@@ -127,8 +129,8 @@ class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text(64))
-    date_created = db.Column(db.DateTime,  default=datetime.datetime.now())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.now())   
+    date_created = db.Column(db.DateTime,  default=datetime.datetime.utcnow())
+    date_modified = db.Column(db.DateTime, default=datetime.datetime.utcnow(), onupdate=datetime.datetime.utcnow())   
     done = db.Column(db.Boolean, default=False) 
 
     bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
@@ -141,8 +143,8 @@ class Item(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "date_created": self.date_created,
-            "date_modified": self.date_modified,
+            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+            "date_modified": self.date_modified.strftime("%Y-%m-%d %H:%M:%S"),
             "done": self.done,
         }
 
@@ -215,18 +217,39 @@ def new_user():
 @auth.login_required
 def create_and_getbucketlist():
 
-    if request.method == 'GET':
+    page = request.args.get('page', 1, type=int)# get page
+    limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
+    limit = limit if limit <= app.config['PERPAGE_MAX_LIMIT'] else app.config['PERPAGE_MAX_LIMIT'] 
 
-        allbucketlist = BucketList.query.all()
-        if not allbucketlist:
+    q = request.args.get('q')  #get q search value and use if available
+
+    if request.method == 'GET':
+        if q:
+            alluserbucketlist = BucketList.query.filter_by(created_by=g.user.username).filter(BucketList.name.ilike('%{0}%'.format(q)))
+        else:
+            alluserbucketlist = BucketList.query.filter_by(created_by=g.user.username)
+            
+        if not alluserbucketlist:
             return jsonify({ 'message':'No bucketlist to display' })
 
-        return jsonify({'bucketlist':[bucketlist.to_json() for bucketlist in allbucketlist]})
-
-        
+        pagination = alluserbucketlist.paginate(page, per_page=limit, 
+            error_out=False)
+        buckets=pagination.items
+        prev = None
+        if pagination.has_prev:
+            prev = url_for('create_and_getbucketlist', page=page-1,limit = 2, _external=True)
+        next = None
+        if pagination.has_next:
+            next = url_for('create_and_getbucketlist', page=page+1,limit = limit, _external=True)
+            
+        return jsonify({
+            'bucketlist': [bucket.to_json() for bucket in buckets], 
+            'prev': prev,
+            'next': next,
+            'count': pagination.total
+        })
 
     if request.method == 'POST':
-
         json_data = request.get_json()
         if not json_data['name']:
             return bad_request('No input data provided')
@@ -243,14 +266,43 @@ def create_and_getbucketlist():
 @auth.login_required #get single bucketlist item
 def get_delete_putbucketlist(id):
 
-    bucketlist = BucketList.query.get(id)
+    bucketlist = BucketList.query.\
+                filter_by(created_by=g.user.username).\
+                filter_by(id=id).first()
     if not bucketlist:
             return not_found('bucket list with id:{} was not found' .format(id))
+
+    page = request.args.get('page', 1, type=int)# get page
+    limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
+    limit = limit if limit <= app.config['PERPAGE_MAX_LIMIT'] else app.config['PERPAGE_MAX_LIMIT']
 
     if request.method == 'GET':
 
         if bucketlist:
-            return jsonify({'bucketlist':bucketlist.to_json()})
+
+            itemsquerydataset = bucketlist.items
+
+            pagination =itemsquerydataset.paginate(page, per_page=limit, error_out=False)
+
+            bucket_items=pagination.items
+
+            prev = None
+            if pagination.has_prev:
+                prev = url_for('get_delete_putbucketlist', page=page-1, limit = limit, _external=True)
+            next = None
+            if pagination.has_next:
+                next = url_for('get_delete_putbucketlist', page=page+1,limit = limit, _external=True)
+            
+            buckets=bucketlist.to_json()
+            buckets['items'] = [ itemsqueryset.to_json() for itemsqueryset in bucket_items ]
+
+            return jsonify({
+                'bucketlist': buckets, 
+                'prev': prev,
+                'next': next,
+                'count': pagination.total
+            })
+
         
     if request.method == 'PUT':
         
@@ -279,15 +331,18 @@ def get_delete_putbucketlist(id):
 @auth.login_required #create item in bucketlist
 def addnew_bucketlistitem(id):
 
-    bucketlist = BucketList.query.get(id)
+    bucketlist = BucketList.query.\
+                filter_by(created_by=g.user.username).\
+                filter_by(id=id).first()
+
+    if not bucketlist:
+        return bad_request('bucket list with id:{} was not found' .format(id))
+
     json_data = request.get_json()
     if not json_data:
         return bad_request('No or incomplete input data provided')
     
-    if not bucketlist:
-        return bad_request('bucket list with id:{} was not found' .format(id))
-    name, done = json_data['name'], json_data['done']
-    
+    name, done = json_data['name'], json_data['done']    
     if done == 'TRUE' or 'true':        
         item = Item(name=name, done=True)
     else:
@@ -297,16 +352,17 @@ def addnew_bucketlistitem(id):
     db.session.add(item)
     db.session.commit()
     
-    item_added=Item.query.get(item.id)
-    json_boolify_item = jboolify(item_added)
-    return jsonify({'Item':json_boolify_item.to_json()})
+    added_item=Item.query.get(item.id)
+    return jsonify({'Item':added_item.to_json()})
 
 @app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
 @auth.login_required
 def delete_and_update(id, item_id):
 
     
-    bucketlist = BucketList.query.get(id)
+    bucketlist = BucketList.query.\
+                filter_by(created_by=g.user.username).\
+                filter_by(id=id).first()
     if not bucketlist:
         return bad_request('bucket list with id:{} was not found' .format(id))
     
@@ -333,7 +389,6 @@ def delete_and_update(id, item_id):
                 return jsonify({'Item':responseitem.to_json()})
         else:
             return bad_request('item not related to bucketlist')
-
 
     if request.method == 'DELETE':
         if item:
