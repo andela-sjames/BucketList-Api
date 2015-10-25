@@ -1,196 +1,6 @@
-########################## CONFIGURATIONS AND SETTINGS #################
-
-import os
-import datetime
-from flask import Flask, abort, request, jsonify, g, url_for
-from flask.ext.sqlalchemy import SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-from flask.ext.httpauth import HTTPBasicAuth
-from passlib.apps import custom_app_context as pwd_context
-from itsdangerous import (TimedJSONWebSignatureSerializer
-                          as Serializer, BadSignature, SignatureExpired)
-#from flask_marshmallow import Marshmallow
-from collections import OrderedDict
-from flask.ext.script import Manager
-from flask.ext.migrate import Migrate, MigrateCommand
-#from Flask_api.errors import bad_request
-########################################################
-
-#The import statements are:
-
-########################################################
-
-# initialization
-app = Flask(__name__)
-#ma = Marshmallow(app)
-
-app.config['SECRET_KEY'] = 'qwertyuiop'
-app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://Administrator:administrator@localhost/bucketlist'
-app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
-app.config['PERPAGE_MIN_LIMIT'] = 20
-app.config['PERPAGE_MAX_LIMIT'] = 100
-
-#postgresql://Administrator:administrator@localhost/bucketlist
-
-# extensions
-db = SQLAlchemy(app)
-auth = HTTPBasicAuth()
-#####################################################
-
-# initialize the 'CLI facing' flask extensions on the created app:
-
-manager = Manager(app)
-migrate = Migrate(app, db)
-
-# add the flask-script commands to be run from the CLI:---to remove later
-manager.add_command('db', MigrateCommand)
-
-@manager.command
-def test():
-   """Discovers and runs unit tests"""
-   import unittest
-   tests = unittest.TestLoader().discover('tests')
-   unittest.TextTestRunner(verbosity=2).run(tests)
-
-################### MODELS  #######################
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True)
-    password_hash = db.Column(db.String(128))
-    date_created = db.Column(db.DateTime, default=datetime.datetime.utcnow())
-    bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
-
-
-    def to_json(self):
-
-        return {
-            "id": self.id,
-            "username": self.username,
-            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-    def __repr__(self):
-        return "<User(username='%s', email='%s')>" % (self.username,
-         self.email)
-
-    def hash_password(self, password):
-        self.password_hash = pwd_context.encrypt(password)
-
-    def verify_password(self, password):
-        return pwd_context.verify(password, self.password_hash)
-
-    def generate_auth_token(self, expiration=42000):
-        s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
-        return s.dumps({'id': self.id})
-
-    @staticmethod
-    def verify_auth_token(token):
-        s = Serializer(app.config['SECRET_KEY'])
-        try:
-            data = s.loads(token)
-        except SignatureExpired:
-            return None    # valid token, but expired
-        except BadSignature:
-            return None    # invalid token
-        user = User.query.get(data['id'])
-        return user
-
-
-class BucketList(db.Model):
-    __tablename__ = 'Bucketlists'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
-    date_created = db.Column(db.DateTime, default=datetime.datetime.now())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.utcnow())   
-    created_by = db.Column(db.String(64))
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan",lazy='dynamic')
-
-
-    #method to be defined here...
-    #"items": [row.to_json() for row in self.items],
-    def to_json(self):
-        """Converts model object into dict to ease Serialization
-        """
-        return {
-            "id": self.id,
-            "name": self.name,
-            "items_count": len(self.items.all()),
-            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_modified": self.date_modified.strftime("%Y-%m-%d %H:%M:%S"),
-            "created_by": self.created_by,
-        }
 
 
 
-class Item(db.Model):
-    __tablename__ = 'items'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text(64))
-    date_created = db.Column(db.DateTime,  default=datetime.datetime.utcnow())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.utcnow(), onupdate=datetime.datetime.utcnow())   
-    done = db.Column(db.Boolean, default=False) 
-
-    bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
-    
-
-
-    def to_json(self):
-        """Converts model object into dict to ease Serialization
-        """
-        return {
-            "id": self.id,
-            "name": self.name,
-            "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_modified": self.date_modified.strftime("%Y-%m-%d %H:%M:%S"),
-            "done": self.done,
-        }
-
-
-
-###################### ERRORS #######################
-def not_found(message):
-    response = jsonify({'status': 404, 'error': 'not found',
-                        'message': message})
-    response.status_code = 404
-    return response
-
-def bad_request(message):
-    response = jsonify({'status': 400, 'error': 'bad request',
-                        'message': message})
-    response.status_code = 400
-    return response
-
-def precondition_failed():
-    response = jsonify({'status': 412, 'error': 'precondition failed'})
-    response.status_code = 412
-    return response
-
-###################### GLOBAL METHODS ##############################
-
-@auth.verify_password
-def verify_password(username_or_token, password):
-    # first try to authenticate by token
-    user = User.verify_auth_token(username_or_token)
-    if not user:
-        # try to authenticate with username/password
-        user = User.query.filter_by(username=username_or_token).first()
-        if not user or not user.verify_password(password):
-            return False
-    g.user = user
-    return True
-
-
-def jboolify(d):
-    if d.done == True:
-        d.done = 'true'
-    else:
-        d.done = 'false'
-    return d
-
-##################  API ACCESS POINTS HERE  #############################
 
 
 
@@ -277,15 +87,10 @@ def get_delete_putbucketlist(id):
     limit = limit if limit <= app.config['PERPAGE_MAX_LIMIT'] else app.config['PERPAGE_MAX_LIMIT']
 
     if request.method == 'GET':
-
         if bucketlist:
-
             itemsquerydataset = bucketlist.items
-
             pagination =itemsquerydataset.paginate(page, per_page=limit, error_out=False)
-
             bucket_items=pagination.items
-
             prev = None
             if pagination.has_prev:
                 prev = url_for('get_delete_putbucketlist', page=page-1, limit = limit, _external=True)
@@ -302,10 +107,8 @@ def get_delete_putbucketlist(id):
                 'next': next,
                 'count': pagination.total
             })
-
         
-    if request.method == 'PUT':
-        
+    if request.method == 'PUT':        
         if bucketlist:
             json_data = request.get_json()
             bucketlist.name=json_data['name']
@@ -314,10 +117,8 @@ def get_delete_putbucketlist(id):
             bucket=BucketList.query.get(id)
 
             return jsonify({'bucketlist':bucketlist.to_json()})
-
         
     if request.method == 'DELETE':
-
         if bucketlist:
             db.session.add(bucketlist)
             db.session.delete(bucketlist)
@@ -358,7 +159,6 @@ def addnew_bucketlistitem(id):
 @app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
 @auth.login_required
 def delete_and_update(id, item_id):
-
     
     bucketlist = BucketList.query.\
                 filter_by(created_by=g.user.username).\
@@ -398,9 +198,3 @@ def delete_and_update(id, item_id):
             db.session.commit()
 
         return jsonify({'message': 'bucketlist successfully deleted'})
-
-
-###################### RUN ################################
-
-if __name__ == '__main__':
-    manager.run()

@@ -56,3 +56,21 @@ def too_many_requests(message='You have exceeded your request rate'):
                         'message': message})
     response.status_code = 429
     return response
+
+###################### ERRORS #######################
+def not_found(message):
+    response = jsonify({'status': 404, 'error': 'not found',
+                        'message': message})
+    response.status_code = 404
+    return response
+
+def bad_request(message):
+    response = jsonify({'status': 400, 'error': 'bad request',
+                        'message': message})
+    response.status_code = 400
+    return response
+
+def precondition_failed():
+    response = jsonify({'status': 412, 'error': 'precondition failed'})
+    response.status_code = 412
+    return response
