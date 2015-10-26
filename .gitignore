@@ -42,14 +42,16 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
-
+# migrations
+Flask_api/migrations
+migrations
 # Translations
 *.mo
 *.pot
 
 # Django stuff:
 *.log
-
+db.sqlite
 # Sphinx documentation
 docs/_build/
 
