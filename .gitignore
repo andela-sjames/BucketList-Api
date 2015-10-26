@@ -43,6 +43,7 @@ nosetests.xml
 coverage.xml
 *,cover
 # migrations
+Flask_api/migrations
 migrations
 # Translations
 *.mo
