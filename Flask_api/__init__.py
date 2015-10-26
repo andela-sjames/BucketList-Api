@@ -1,10 +1,10 @@
+
+
 import os
-import datetime
-from flask import Flask, abort, request, jsonify, g, url_for
+from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask.ext.httpauth import HTTPBasicAuth
-from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
 
@@ -24,3 +24,5 @@ app.config['PERPAGE_MAX_LIMIT'] = 100
 # extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
+
+from Flask_api import api, models, errors

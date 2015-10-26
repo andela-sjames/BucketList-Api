@@ -1,5 +1,11 @@
 
 
+from Flask_api import app, auth, db
+from .models import User, BucketList, Item
+from .errors import not_found, bad_request,  precondition_failed
+from sqlalchemy.exc import IntegrityError
+from flask import request, jsonify, g, url_for
+from datetime import datetime
 
 
 
@@ -17,8 +23,19 @@ def new_user():
     db.session.commit()
     user = User.query.get(user.id)
     #user.to_json()
-    token = user.generate_auth_token(450000)
+    token = user.generate_auth_token(3600)
     return (jsonify({'user': user.to_json(), 'token': token.decode('ascii'), 'duration': 'expires on user logout' }), 201)
+
+#{'Location': url_for('get_user', id = user.id, _external = True)}
+
+@app.route('/auth/token', methods=['POST'])
+@auth.login_required
+def request_token():
+    token = g.user.generate_auth_token()
+    return (jsonify({'token': token.decode('ascii'), 
+                'duration': '3600'}), 201)
+
+
 
 
 @app.route("/bucketlists", methods=['GET','POST'])
@@ -91,10 +108,10 @@ def get_delete_putbucketlist(id):
             bucket_items=pagination.items
             prev = None
             if pagination.has_prev:
-                prev = url_for('get_delete_putbucketlist', page=page-1, limit = limit, _external=True)
+                prev = url_for('get_delete_putbucketlist', id = bucketlist.id,page=page-1, limit = limit, _external=True)
             next = None
             if pagination.has_next:
-                next = url_for('get_delete_putbucketlist', page=page+1,limit = limit, _external=True)
+                next = url_for('get_delete_putbucketlist',id = bucketlist.id ,page=page+1, limit = limit, _external=True)
             
             buckets=bucketlist.to_json()
             buckets['items'] = [ itemsqueryset.to_json() for itemsqueryset in bucket_items ]
@@ -110,6 +127,7 @@ def get_delete_putbucketlist(id):
         if bucketlist:
             json_data = request.get_json()
             bucketlist.name=json_data['name']
+            bucketlist.date_modified=datetime.utcnow()
             db.session.add(bucketlist)
             db.session.commit()
             bucket=BucketList.query.get(id)
@@ -143,9 +161,9 @@ def addnew_bucketlistitem(id):
     
     name, done = json_data['name'], json_data['done']    
     if done == 'TRUE' or 'true':        
-        item = Item(name=name, done=True)
+        item = Item(name=name, done=True, date_modified=datetime.utcnow())
     else:
-        item =Item(name=name,done=False)
+        item =Item(name=name,done=False, date_modified=datetime.utcnow())
         
     item.bucketlist_id=bucketlist.id
     db.session.add(item)
@@ -175,15 +193,19 @@ def delete_and_update(id, item_id):
                 name, done = json_data['name'], json_data['done']
         
                 if done == 'TRUE' or 'true':        
-                    item = Item(name=name, done=True)
+                    item.name=name 
+                    item.done=True 
+                    item.date_modified=datetime.utcnow()
                 else:
-                    item =Item(name=name,done=False)
+                    item.name=name
+                    item.done=False, 
+                    item.date_modified=datetime.utcnow()
 
                 item.bucketlist_id=bucketlist.id
                 db.session.add(item)
                 db.session.commit()
 
-                responseitem = jboolify(Item.query.get(item.id))
+                responseitem = Item.query.get(item.id)
                 return jsonify({'Item':responseitem.to_json()})
         else:
             return bad_request('item not related to bucketlist')

@@ -1,5 +1,8 @@
+
+
 from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
+from Flask_api import app, db
 
 # initialize the 'CLI facing' flask extensions on the created app:
 

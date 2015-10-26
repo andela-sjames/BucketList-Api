@@ -1,13 +1,19 @@
 
 
+from Flask_api import app, db, auth
+from flask import g
+from datetime import datetime
+from passlib.apps import custom_app_context as pwd_context
+from itsdangerous import (TimedJSONWebSignatureSerializer
+                          as Serializer, BadSignature, SignatureExpired)
+from .errors import unauthorized
 
-################### MODELS  #######################
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
     password_hash = db.Column(db.String(128))
-    date_created = db.Column(db.DateTime, default=datetime.datetime.utcnow())
+    date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
     bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
 
 
@@ -29,7 +35,7 @@ class User(db.Model):
     def verify_password(self, password):
         return pwd_context.verify(password, self.password_hash)
 
-    def generate_auth_token(self, expiration=42000):
+    def generate_auth_token(self, expiration=36000):
         s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'id': self.id})
 
@@ -39,19 +45,19 @@ class User(db.Model):
         try:
             data = s.loads(token)
         except SignatureExpired:
-            return None    # valid token, but expired
+            return None   # valid token, but expired
         except BadSignature:
             return None    # invalid token
-        user = User.query.get(data['id'])
-        return user
+        g.user = User.query.get(data['id'])
+        return g.user
 
 
 class BucketList(db.Model):
     __tablename__ = 'Bucketlists'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
-    date_created = db.Column(db.DateTime, default=datetime.datetime.now())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.now(), onupdate=datetime.datetime.utcnow())   
+    date_created = db.Column(db.DateTime,index=True, default=datetime.now())
+    date_modified = db.Column(db.DateTime,index=True, default=datetime.now())  
     created_by = db.Column(db.String(64))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan",lazy='dynamic')
@@ -77,8 +83,8 @@ class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text(64))
-    date_created = db.Column(db.DateTime,  default=datetime.datetime.utcnow())
-    date_modified = db.Column(db.DateTime, default=datetime.datetime.utcnow(), onupdate=datetime.datetime.utcnow())   
+    date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
+    date_modified = db.Column(db.DateTime,index =True, default=datetime.utcnow())   
     done = db.Column(db.Boolean, default=False) 
 
     bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
@@ -102,9 +108,14 @@ def verify_password(username_or_token, password):
     user = User.verify_auth_token(username_or_token)
     if not user:
         # try to authenticate with username/password
-        user = User.query.filter_by(username=username_or_token).first()
-        if not user or not user.verify_password(password):
+        g.user = User.query.filter_by(username=username_or_token).first()
+        #import pdb; pdb.set_trace()
+        if not g.user or not g.user.verify_password(password):
             return False
-    g.user = user
+    g.user = g.user
     return True
+
+@auth.error_handler
+def unauthorized_error():
+    return unauthorized()
 
