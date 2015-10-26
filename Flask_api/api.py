@@ -191,15 +191,9 @@ def delete_and_update(id, item_id):
             if item.bucketlist_id == bucketlist.id:
                 json_data = request.get_json()
                 name, done = json_data['name'], json_data['done']
-        
-                if done == 'TRUE' or 'true':        
-                    item.name=name 
-                    item.done=True 
-                    item.date_modified=datetime.utcnow()
-                else:
-                    item.name=name
-                    item.done=False, 
-                    item.date_modified=datetime.utcnow()
+                item.name=name 
+                item.done=done
+                item.date_modified=datetime.utcnow()
 
                 item.bucketlist_id=bucketlist.id
                 db.session.add(item)

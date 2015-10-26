@@ -85,7 +85,7 @@ class Item(db.Model):
     name = db.Column(db.Text(64))
     date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
     date_modified = db.Column(db.DateTime,index =True, default=datetime.utcnow())   
-    done = db.Column(db.Boolean, default=False) 
+    done = db.Column(db.Boolean, default=False, nullable =False) 
 
     bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
     
