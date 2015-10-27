@@ -11,8 +11,8 @@ from datetime import datetime
 
 @app.route('/auth/login', methods=['POST'])
 def new_user():
-    username = request.json.get('username', ' ')
-    password = request.json.get('password', ' ')
+    username = request.json.get('username')
+    password = request.json.get('password')
     if not username  or not password:
         return bad_request('Missing arguments/parameters given')
     if User.query.filter_by(username=username).first() is not None:
@@ -21,20 +21,25 @@ def new_user():
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
-    user = User.query.get(user.id)
-    #user.to_json()
-    token = user.generate_auth_token(3600)
-    return (jsonify({'user': user.to_json(), 'token': token.decode('ascii'), 'duration': 'expires on user logout' }), 201)
-
+    return (jsonify({ 'user':user.to_json(),
+                        'request_token':url_for('request_token'), 
+                        'User':url_for('get_user', username = user.username,  _external =True) }),201)
 #{'Location': url_for('get_user', id = user.id, _external = True)}
 
-@app.route('/auth/token', methods=['POST'])
+@app.route('/auth/token')
 @auth.login_required
 def request_token():
     token = g.user.generate_auth_token()
-    return (jsonify({'token': token.decode('ascii'), 
-                'duration': '3600'}), 201)
+    return jsonify({ 'token': token.decode('ascii')})
 
+@app.route('/user/<username>/')
+@auth.login_required
+def get_user(username):
+    '''Return a user'''
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return unauthorized()
+    return jsonify({'user': user.to_json()})
 
 
 

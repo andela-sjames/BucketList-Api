@@ -71,7 +71,7 @@ class BucketList(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "items_count": len(self.items.all()),
+            "items_count":len(self.items.all()),
             "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
             "date_modified": self.date_modified.strftime("%Y-%m-%d %H:%M:%S"),
             "created_by": self.created_by,
@@ -82,7 +82,7 @@ class BucketList(db.Model):
 class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text(64))
+    name = db.Column(db.String(64))
     date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
     date_modified = db.Column(db.DateTime,index =True, default=datetime.utcnow())   
     done = db.Column(db.Boolean, default=False, nullable =False) 
