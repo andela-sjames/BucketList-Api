@@ -78,6 +78,15 @@ class APIClientTestCase(unittest.TestCase):
 
         self.assertTrue(response.status_code == 200)
 
+        #test user can't view another user data
+        response = self.client.get(
+            url_for('get_user', username = 'mathew'),
+            headers=self.get_api_headers('James', 'Andela'))
+        #import pdb; pdb.set_trace()
+
+        self.assertTrue(response.status_code == 401)
+
+
 
 
     def test_token_auth(self):
@@ -167,6 +176,13 @@ class APIClientTestCase(unittest.TestCase):
             headers=self.get_api_headers('James', 'Andela'))
         self.assertTrue(response.status_code == 200)
 
+        #user can't post to others bucketlist
+        response = self.client.post(
+            url_for('get_delete_putbucketlist', id =2 ),
+            headers=self.get_api_headers('James', 'Andela'))
+        self.assertTrue(response.status_code == 405)
+
+
         #PUT update bucketlist via id
         response = self.client.put(
             url_for('get_delete_putbucketlist', id =1),
@@ -205,6 +221,13 @@ class APIClientTestCase(unittest.TestCase):
             data=json.dumps({'name': 'Flask api', 'done': True }))
         self.assertTrue(response.status_code == 200)
 
+        #search for a non-user bucketlist
+        response = self.client.get(
+            url_for('addnew_bucketlistitem', id = 4),
+            headers=self.get_api_headers('James', 'Andela'))
+        self.assertTrue(response.status_code == 405)
+
+
 
     def test_bucketlist_items(self):
 
@@ -215,6 +238,13 @@ class APIClientTestCase(unittest.TestCase):
             url_for('create_and_getbucketlist'),
             headers=self.get_api_headers('James', 'Andela'),
             data=json.dumps({'name': 'I just created a bucketlist'}))
+        self.assertTrue(response.status_code == 200)
+
+        #send empty data to bucketlist item
+        response = self.client.post(
+            url_for('addnew_bucketlistitem', id = 1),
+            headers=self.get_api_headers('James', 'Andela'),
+            data=json.dumps({'name': ' ', 'done':''}))
         self.assertTrue(response.status_code == 200)
 
         #create a bucketlist item.
@@ -231,11 +261,18 @@ class APIClientTestCase(unittest.TestCase):
             data=json.dumps({'name': 'RESTful api', 'done': True }))
         self.assertTrue(response.status_code == 200)
 
-        #update th wrong bucktlistiem
+        #update the wrong bucktlistiem
         response = self.client.put(
-            url_for('delete_and_update', id = 2, item_id = 1),
+            url_for('delete_and_update', id = 1, item_id = 3),
             headers=self.get_api_headers('James', 'Andela'),
             data=json.dumps({'name': 'RESTful api', 'done': True }))
+        self.assertTrue(response.status_code == 400)
+
+        #update the wrong list
+        response = self.client.put(
+            url_for('delete_and_update', id = 2, item_id = 2),
+            headers=self.get_api_headers('James', 'Andela'),
+            data=json.dumps({'name': 'RESTful api'}))
         self.assertTrue(response.status_code == 400)
 
 

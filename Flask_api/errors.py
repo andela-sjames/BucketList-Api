@@ -17,19 +17,13 @@ def unauthorized(message=None):
         response.headers['Location'] = url_for('request_token')
     return response
 
-def not_found(message):
-    response = jsonify({'status': 404, 'error': 'not found',
-                        'message': message})
-    response.status_code = 404
-    return response
-
 def bad_request(message):
     response = jsonify({'status': 400, 'error': 'bad request',
                         'message': message})
     response.status_code = 400
     return response
 
-def precondition_failed():
-    response = jsonify({'status': 412, 'error': 'precondition failed'})
-    response.status_code = 412
+def not_allowed():
+    response = jsonify({'status': 405, 'error': 'method not allowed'})
+    response.status_code = 405
     return response

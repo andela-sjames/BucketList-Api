@@ -2,7 +2,7 @@
 
 from Flask_api import app, auth, db
 from .models import User, BucketList, Item
-from .errors import not_found, bad_request,  precondition_failed
+from .errors import bad_request, not_allowed,unauthorized
 from sqlalchemy.exc import IntegrityError
 from flask import request, jsonify, g, url_for
 from datetime import datetime
@@ -100,7 +100,7 @@ def get_delete_putbucketlist(id):
                 filter_by(created_by=g.user.username).\
                 filter_by(id=id).first()
     if not bucketlist:
-            return not_found('bucket list with id:{} was not found' .format(id))
+            return not_allowed('not allowed to view bucketlist{}' .format(id))
 
     page = request.args.get('page', 1, type=int)# get page
     limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
@@ -161,15 +161,8 @@ def addnew_bucketlistitem(id):
         return bad_request('bucket list with id:{} was not found' .format(id))
 
     json_data = request.get_json()
-    if not json_data:
-        return bad_request('No or incomplete input data provided')
-    
-    name, done = json_data['name'], json_data['done']    
-    if done == 'TRUE' or 'true':        
-        item = Item(name=name, done=True, date_modified=datetime.utcnow())
-    else:
-        item =Item(name=name,done=False, date_modified=datetime.utcnow())
-        
+    name, done = json_data['name'], json_data['done']            
+    item = Item(name=name, done=True, date_modified=datetime.utcnow())
     item.bucketlist_id=bucketlist.id
     db.session.add(item)
     db.session.commit()
@@ -206,8 +199,6 @@ def delete_and_update(id, item_id):
 
                 responseitem = Item.query.get(item.id)
                 return jsonify({'Item':responseitem.to_json()})
-        else:
-            return bad_request('item not related to bucketlist')
 
     if request.method == 'DELETE':
         if item:
