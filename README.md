@@ -65,7 +65,7 @@ PUT /bucketlists/id/items/item_id | Update a bucket list item
 DELETE /bucketlists/id/items/item_id | Delete an item in a bucket list  
 ``` Parameters/Input data: nil ```  
 
-```
+
 ##WORKFLOW
 User login/registers via ``` POST auth/login``` route and a request token route is exposed.  
 User sends a ```GET``` request to exposed route using username and password.  
@@ -77,7 +77,6 @@ If User token is still valid before logout, logging out will invalidate the user
 
 RESTful API is RESTLESS and so no user session is stored.
 
-```
 
 #USAGE
 Install dependencies using ``` pip install -r requirements.txt ```    
