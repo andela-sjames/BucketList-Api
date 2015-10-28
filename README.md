@@ -2,7 +2,7 @@
 Python Flask Api Demonstration
 
 
-This is an API that allows users to create bucketlists and add items to their bucketlists.As a Token Based Api,  Authentication is used to ensure security, allowing Users interaction only when there are authenticated via a set a protocols.
+This is an API that allows users to create bucketlists and add items to their bucketlists.As a Token Based Api,  Authentication is used to ensure security, allowing Users interaction only when there are authenticated via a set a protocols.Build using python Flask.
 
 
 
@@ -78,6 +78,13 @@ If User token is still valid before logout, logging out will invalidate the user
 RESTful API is RESTLESS and so no user session is stored.
 
 ```
+
+#USAGE
+Install dependencies using ``` pip install -r requirements.txt ```    
+Run ``` python manager.py runserver``` to start server  
+Test Api using ```POSTMAN```  or ``` cURL ```  
+
+
 
 
 
