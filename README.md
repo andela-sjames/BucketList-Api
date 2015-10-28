@@ -77,6 +77,16 @@ If User token is still valid before logout, logging out will invalidate the user
 
 RESTful API is RESTLESS and so no user session is stored.
 
+###Other Features  
+User can search for bucketlist using limits and page(pagination via limit)  
+``` GET /bucketlists/limit=2 ``` and ``` GET /bucketlists/limit=4&page=1```  
+Default limit without specification is 20 and default page number is 1.  
+```GET /bucketlists/id/limit=5 ``` and ```GET /bucketlists/id/limit=4&page=2```  
+
+User can also search for bucketlist using search parameter q.  
+``` GET /bucketlists/q='my list1'``` and  ``` GET /bucketlists/q='game'&limit=4&page=1```  
+
+
 
 #USAGE
 Install dependencies using ``` pip install -r requirements.txt ```    
