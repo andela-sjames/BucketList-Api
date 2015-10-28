@@ -46,7 +46,7 @@ DELETE /bucketlists/id | Delete this single bucket list
 ``` Parameters/Input data: nil ```  
 
 
-**__ITEMS__**  __url data__:__id__ = __bucketlist__ __id__, __item_i__d = __item id__   
+**__ITEMS__**  __url data__:__id__ = __bucketlist__ __id__, __item_id__ = __item id__   
 
 POST /bucketlists/id/items/ | Create a new item in bucket list  
 ``` Parameters/Input data: {"name":"my bucketlistitem", "Done":false } ```  
