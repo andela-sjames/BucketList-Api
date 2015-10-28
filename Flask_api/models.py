@@ -77,8 +77,8 @@ class BucketList(db.Model):
 
     def to_json(self):
 
-       ''' Method to convert objects to python dictioary format.'''
-
+        ''' Method to convert objects to python dictioary format.'''
+        
         return {
             "id": self.id,
             "name": self.name,
