@@ -19,7 +19,7 @@ POST /bucketlists/id/items/|Create a new item in bucket list|FALSE
 PUT /bucketlists/id/items/item_id|Update a bucket list item|FALSE
 DELETE /bucketlists/id/items/item_id|Delete an item in a bucket list|FALSE
 
-**__RESOURCES__**
+##**__RESOURCES__**
 
 **__AUTH__** __url_data__:username = "username"  
 
