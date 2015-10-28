@@ -83,9 +83,6 @@ def create_and_getbucketlist():
             alluserbucketlist = BucketList.query.filter_by(created_by=g.user.username).filter(BucketList.name.ilike('%{0}%'.format(q)))
         else:
             alluserbucketlist = BucketList.query.filter_by(created_by=g.user.username)
-            
-        if not alluserbucketlist:
-            return jsonify({ 'message':'No bucketlist to display' })
 
         pagination = alluserbucketlist.paginate(page, per_page=limit, 
             error_out=False)
@@ -125,7 +122,7 @@ def get_delete_putbucketlist(id):
                 filter_by(created_by=g.user.username).\
                 filter_by(id=id).first()
     if not bucketlist:
-            return not_allowed('not allowed to view bucketlist{}' .format(id))
+            return not_allowed()
 
     page = request.args.get('page', 1, type=int)# get page
     limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
