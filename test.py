@@ -1,3 +1,5 @@
+'''Script defined to test api service.'''
+
 import os, json
 import unittest
 from Flask_api import app, db
@@ -6,10 +8,13 @@ from Flask_api.models import BucketList, Item, User
 from flask import url_for, g
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-#headers = {'Authorization': 'Basic ' + b64encode("{0}:{1}".format(username, password))}
 
 class APIClientTestCase(unittest.TestCase):
+
     def setUp(self):
+
+        '''Instanciate test.'''
+
         self.app = app
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'test.db')
         app.config['SERVER_NAME'] = 'localhost'
@@ -25,6 +30,9 @@ class APIClientTestCase(unittest.TestCase):
         g.user = u                
         
     def tearDown(self):
+
+        '''Teardown testcase'''
+
         db.session.remove() 
         db.drop_all() 
         self.app_context.pop()

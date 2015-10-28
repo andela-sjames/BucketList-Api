@@ -1,4 +1,4 @@
-
+''' Script used to define models for Api serveic.'''
 
 from Flask_api import app, db, auth
 from flask import g
@@ -9,6 +9,9 @@ from itsdangerous import (TimedJSONWebSignatureSerializer
 from .errors import unauthorized
 
 class User(db.Model):
+
+    '''User table defined for user authenticatin.'''
+
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
@@ -19,6 +22,8 @@ class User(db.Model):
 
 
     def to_json(self):
+
+        ''' Method to convert objects to python dictioary format.'''
 
         return {
             "id": self.id,
@@ -43,6 +48,9 @@ class User(db.Model):
 
     @staticmethod
     def verify_auth_token(token):
+
+        '''Method to verify user token.'''
+
         s = Serializer(app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
@@ -55,6 +63,9 @@ class User(db.Model):
 
 
 class BucketList(db.Model):
+
+    '''Bucketlist model defined'''
+
     __tablename__ = 'Bucketlists'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
@@ -64,12 +75,10 @@ class BucketList(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan",lazy='dynamic')
 
-
-    #method to be defined here...
-    #"items": [row.to_json() for row in self.items],
     def to_json(self):
-        """Converts model object into dict to ease Serialization
-        """
+
+       ''' Method to convert objects to python dictioary format.'''
+
         return {
             "id": self.id,
             "name": self.name,
@@ -82,6 +91,9 @@ class BucketList(db.Model):
 
 
 class Item(db.Model):
+
+    '''Item model defined for api service. '''
+
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
@@ -94,8 +106,9 @@ class Item(db.Model):
 
 
     def to_json(self):
-        """Converts model object into dict to ease Serialization
-        """
+
+        ''' Method to convert objects to python dictioary format.'''
+        
         return {
             "id": self.id,
             "name": self.name,

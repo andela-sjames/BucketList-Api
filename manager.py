@@ -1,3 +1,4 @@
+''' Script used to Manage database and manage test and run server.'''
 
 import os
 COV = None
@@ -10,12 +11,10 @@ from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
 from Flask_api import app, db
 
-# initialize the 'CLI facing' flask extensions on the created app:
-
 manager = Manager(app)
 migrate = Migrate(app, db)
 
-# add the flask-script commands to be run from the CLI:---to remove later
+
 manager.add_command('db', MigrateCommand)
 
 @manager.command

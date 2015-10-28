@@ -1,4 +1,4 @@
-
+'''Script Used for Api Accesspoint. '''
 
 from Flask_api import app, auth, db
 from .models import User, BucketList, Item
@@ -11,6 +11,9 @@ from datetime import datetime
 
 @app.route('/auth/login', methods=['POST'])
 def new_user():
+
+    '''User is registered and logged in. '''
+
     username = request.json.get('username')
     password = request.json.get('password')
     if not username  or not password:
@@ -40,6 +43,8 @@ def new_user():
 @auth.login_required
 def logout(username):
 
+    ''' User is logged out and LoggedIn set to false.'''
+
     user = User.query.filter_by(username=username).first()
     if not user:
         return unauthorized('This account does not belong to you')
@@ -54,6 +59,9 @@ def logout(username):
 @app.route('/auth/token')
 @auth.login_required
 def request_token():
+
+    ''' User is given a token '''
+
     token = g.user.generate_auth_token()
     return jsonify({ 'token': token.decode('ascii')})
 
@@ -61,7 +69,9 @@ def request_token():
 @app.route('/user/<username>')
 @auth.login_required
 def get_user(username):
-    '''Return a user'''
+    
+    ''' Returns a user by username '''
+
     user = User.query.filter_by(username=username).first()
     if not user:
         return unauthorized()
@@ -72,11 +82,14 @@ def get_user(username):
 @auth.login_required
 def create_and_getbucketlist():
 
+    '''User can view and create bucketlist. '''
+    
+    #set page to 1 and limit to 20 by default.
     page = request.args.get('page', 1, type=int)# get page
     limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
     limit = limit if limit <= app.config['PERPAGE_MAX_LIMIT'] else app.config['PERPAGE_MAX_LIMIT'] 
 
-    q = request.args.get('q')  #get q search value and use if available
+    q = request.args.get('q')#get q search value and use if available
 
     if request.method == 'GET':
         if q:
@@ -84,6 +97,7 @@ def create_and_getbucketlist():
         else:
             alluserbucketlist = BucketList.query.filter_by(created_by=g.user.username)
 
+        #pagination of view by default.
         pagination = alluserbucketlist.paginate(page, per_page=limit, 
             error_out=False)
         buckets=pagination.items
@@ -117,6 +131,8 @@ def create_and_getbucketlist():
 @app.route("/bucketlists/<int:id>", methods=['GET', 'PUT', 'DELETE'])
 @auth.login_required #get single bucketlist item
 def get_delete_putbucketlist(id):
+
+    ''' Get bucket list by id's'''
 
     bucketlist = BucketList.query.\
                 filter_by(created_by=g.user.username).\
@@ -162,6 +178,7 @@ def get_delete_putbucketlist(id):
             return jsonify({'bucketlist':bucketlist.to_json()})
         
     if request.method == 'DELETE':
+        #dynamicall delete all related items to bucketlist.
         if bucketlist:
             db.session.add(bucketlist)
             db.session.delete(bucketlist)
@@ -173,6 +190,8 @@ def get_delete_putbucketlist(id):
 @app.route("/bucketlists/<int:id>/items/", methods=['POST'])
 @auth.login_required #create item in bucketlist
 def addnew_bucketlistitem(id):
+
+    ''' create a bucket list item. '''
 
     bucketlist = BucketList.query.\
                 filter_by(created_by=g.user.username).\
@@ -195,6 +214,8 @@ def addnew_bucketlistitem(id):
 @app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
 @auth.login_required
 def delete_and_update(id, item_id):
+
+    '''Delete and update a bucketlist item. '''
     
     bucketlist = BucketList.query.\
                 filter_by(created_by=g.user.username).\
