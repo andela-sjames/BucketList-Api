@@ -25,8 +25,8 @@ DELETE /bucketlists/id/items/item_id|Delete an item in a bucket list|FALSE
 
 *Only visible/exposed on login
 
-*GET user/username
-*``` Parameters/Input data: nil ```
+GET user/username  
+``` Parameters/Input data: nil ```
 
 **BUCKETLIST** url data: id = bucketlist id
 
