@@ -9,7 +9,7 @@ This is an API that allows users to create bucketlists and add items to their bu
 EndPoint |Functionality|Public Access
 ---------|-------------|--------------
 POST /auth/login|Logs a user in|TRUE
-GET /auth/logout<username>|Logs a user out| FALSE
+GET /auth/logout/username|Logs a user out| FALSE
 POST /bucketlists/|Create a new bucket list|FALSE
 GET /bucketlists/|List all the created bucket lists|FASLE
 GET /bucketlists/id|Get single bucket list|FALSE
@@ -20,6 +20,14 @@ PUT /bucketlists/id/items/item_id|Update a bucket list item|FALSE
 DELETE /bucketlists/id/items/item_id|Delete an item in a bucket list|FALSE
 
 **__RESOURCES__**
+
+**__AUTH__** __url_data__:username = "username"  
+
+POST /auth/login | Logs a user in  
+```Parameters/Input data: {"username":"testuser"}```  
+
+GET /auth/logout/username | Logs a user out  __url_data__:username = "username"  
+``` Parameters/Input data: nil ```  
 
 **__User__**  __url data__: __username__ = __username__  
 
@@ -56,6 +64,20 @@ PUT /bucketlists/id/items/item_id | Update a bucket list item
 
 DELETE /bucketlists/id/items/item_id | Delete an item in a bucket list  
 ``` Parameters/Input data: nil ```  
+
+```
+##WORKFLOW
+User login/registers via ``` POST auth/login``` route and a request token route is exposed.  
+User sends a ```GET``` request to exposed route using username and password.  
+User uses token which expires after a period of 1 hour.  
+User obtains token if he/she wants to continue using  Api services.  
+User can choose to log out using ``` GET auth/logout/username``` which invalidates his/her token.     
+Once User is logged out, user will have to login to have access to valid token.  
+If User token is still valid before logout, logging out will invalidate the user token.  
+
+RESTful API is RESTLESS and so no user session is stored.
+
+```
 
 
 
