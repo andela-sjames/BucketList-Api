@@ -19,6 +19,7 @@ class APIClientTestCase(unittest.TestCase):
         self.client = app.test_client()
         u = User(username='James')
         u.hash_password('Andela')
+        u.LoggedIn = True
         db.session.add(u)
         db.session.commit()
         g.user = u
@@ -43,6 +44,8 @@ class APIClientTestCase(unittest.TestCase):
     def test_auth_login(self):
 
         ''' Test User can login'''
+
+        #user logs in 
         user={'username': 'general', 'password': 'James'}
         response = self.client.post(
             '/auth/login',
@@ -283,28 +286,58 @@ class APIClientTestCase(unittest.TestCase):
         self.assertTrue(response.status_code == 200)
 
 
+    def test_user_logout(self):
+
+        ''' Test that user can logout and login'''
+
+        #user logs in
+        user={'username': 'general', 'password': 'James'}
+        response = self.client.post(
+            '/auth/login',
+            content_type='application/json',
+            data=json.dumps(user),
+            )
+        self.assertEqual(response.status_code, 201, msg='response status should be 201')
+
+        #user logs in again without logging out.
+        user={'username': 'general', 'password': 'James'}
+        response = self.client.post(
+            '/auth/login',
+            content_type='application/json',
+            data=json.dumps(user),
+            )
+        self.assertEqual(response.status_code, 400, msg='response status should be 400 user already exist and LoggedIn')
+
+
+        #user logs out
+        response = self.client.get(
+            url_for('logout', username='general'),
+            headers=self.get_api_headers('general', 'James'))
+        self.assertTrue(response.status_code == 200)
+
+        #user should not logout an existing user.
+        response = self.client.get(
+            url_for('logout', username='James'),
+            headers=self.get_api_headers('general', 'James'))
+        self.assertTrue(response.status_code == 401)
+
+
+
+
+        #user logs in again
+        user={'username': 'general', 'password': 'James'}
+        response = self.client.post(
+            '/auth/login',
+            content_type='application/json',
+            data=json.dumps(user),
+            )
+        self.assertEqual(response.status_code, 201, msg='response status should be 201')
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
 if __name__ == '__main__':
     unittest.main()

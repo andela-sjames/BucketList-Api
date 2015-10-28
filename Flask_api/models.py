@@ -14,6 +14,7 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     password_hash = db.Column(db.String(128))
     date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
+    LoggedIn = db.Column(db.Boolean, default=True)
     bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
 
 
@@ -23,6 +24,7 @@ class User(db.Model):
             "id": self.id,
             "username": self.username,
             "date_created": self.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+            "LoggedIn": self.LoggedIn
         }
 
     def __repr__(self):
@@ -106,14 +108,23 @@ class Item(db.Model):
 def verify_password(username_or_token, password):
     # first try to authenticate by token
     user = User.verify_auth_token(username_or_token)
-    if not user:
+    #check if user is loggedIn
+    if user and user.LoggedIn:
+        g.user = user
+        return True
+    elif user and not user.LoggedIn:
+        return False
+    elif not user:
         # try to authenticate with username/password
-        g.user = User.query.filter_by(username=username_or_token).first()
-        #import pdb; pdb.set_trace()
-        if not g.user or not g.user.verify_password(password):
+        user = User.query.filter_by(username=username_or_token).first()
+        if user and user.LoggedIn:
+            g.user = user
+            return True
+        if user and not user.LoggedIn:
             return False
-    g.user = g.user
-    return True
+        if not user or not user.verify_password(password):
+            return False
+
 
 @auth.error_handler
 def unauthorized_error():
