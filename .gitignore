@@ -48,7 +48,8 @@ migrations
 # Translations
 *.mo
 *.pot
-
+tmp
+test.db
 # Django stuff:
 *.log
 db.sqlite

@@ -15,22 +15,48 @@ def new_user():
     password = request.json.get('password')
     if not username  or not password:
         return bad_request('Missing arguments/parameters given')
-    if User.query.filter_by(username=username).first() is not None:
-        return bad_request('User already exists')
-    user = User(username=username)
-    user.hash_password(password)
+    exist = User.query.filter_by(username=username).first()
+    if not exist:
+        user = User(username=username)
+        user.hash_password(password)
+        user.LoggedIn=True
+        db.session.add(user)
+        db.session.commit()
+        return (jsonify({ 'user':user.to_json(),
+                            'request_token':url_for('request_token'), 
+                            'User':url_for('get_user', username = user.username,  _external =True) }),201)
+
+    if exist.username and not exist.LoggedIn:
+        exist.LoggedIn= True
+        return (jsonify({ 'user':exist.to_json(),
+                        'request_token':url_for('request_token'), 
+                        'User':url_for('get_user', username = exist.username,  _external =True) }),201)
+    else:
+        if exist.username and exist.LoggedIn:
+            return bad_request('User already exists and LoggedIn')
+
+
+@app.route('/auth/logout/<username>', methods=['GET'])
+@auth.login_required
+def logout(username):
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return unauthorized('This account does not belong to you')
+    user.LoggedIn = False
     db.session.add(user)
     db.session.commit()
-    return (jsonify({ 'user':user.to_json(),
-                        'request_token':url_for('request_token'), 
-                        'User':url_for('get_user', username = user.username,  _external =True) }),201)
-#{'Location': url_for('get_user', id = user.id, _external = True)}
+
+    return jsonify({ 'message': 'You have successfully loggedOut',
+            'Log-In':url_for('new_user', _external=True)})
+
 
 @app.route('/auth/token')
 @auth.login_required
 def request_token():
     token = g.user.generate_auth_token()
     return jsonify({ 'token': token.decode('ascii')})
+
 
 @app.route('/user/<username>/')
 @auth.login_required
@@ -40,7 +66,6 @@ def get_user(username):
     if not user:
         return unauthorized()
     return jsonify({'user': user.to_json()})
-
 
 
 @app.route("/bucketlists", methods=['GET','POST'])
@@ -148,7 +173,6 @@ def get_delete_putbucketlist(id):
             return jsonify({'message': 'bucketlist successfully deleted'})
 
         
-
 @app.route("/bucketlists/<int:id>/items", methods=['POST'])
 @auth.login_required #create item in bucketlist
 def addnew_bucketlistitem(id):
@@ -169,6 +193,7 @@ def addnew_bucketlistitem(id):
     
     added_item=Item.query.get(item.id)
     return jsonify({'Item':added_item.to_json()})
+
 
 @app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
 @auth.login_required
