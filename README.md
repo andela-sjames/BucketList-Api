@@ -21,14 +21,14 @@ DELETE /bucketlists/id/items/item_id|Delete an item in a bucket list|FALSE
 
 **__RESOURCES__**
 
-**__User__**  __url data: username = username__  
+**__User__**  __url data__: __username__ = __username__  
 
 Only visible/exposed on login  
 
 GET user/username  
 ``` Parameters/Input data: nil ```  
 
-**BUCKETLIST** __url data: id = bucketlist id__   
+**BUCKETLIST** __url data__: __id__ = __bucketlist id__   
 
 POST /bucketlists/  | create a new bucketlist  
 ``` Parameters/Input data: {"name":"name of bucketlist"} ```  
@@ -46,7 +46,7 @@ DELETE /bucketlists/id | Delete this single bucket list
 ``` Parameters/Input data: nil ```  
 
 
-**__ITEMS__** url data: __id = bucketlist id, item_id = item id__   
+**__ITEMS__**  __url data__:__id__ = __bucketlist__ __id__, __item_i__d = __item id__   
 
 POST /bucketlists/id/items/ | Create a new item in bucket list  
 ``` Parameters/Input data: {"name":"my bucketlistitem", "Done":false } ```  
