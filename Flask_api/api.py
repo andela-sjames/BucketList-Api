@@ -58,7 +58,7 @@ def request_token():
     return jsonify({ 'token': token.decode('ascii')})
 
 
-@app.route('/user/<username>/')
+@app.route('/user/<username>')
 @auth.login_required
 def get_user(username):
     '''Return a user'''
@@ -68,7 +68,7 @@ def get_user(username):
     return jsonify({'user': user.to_json()})
 
 
-@app.route("/bucketlists", methods=['GET','POST'])
+@app.route("/bucketlists/", methods=['GET','POST'])
 @auth.login_required
 def create_and_getbucketlist():
 
@@ -170,7 +170,7 @@ def get_delete_putbucketlist(id):
             return jsonify({'message': 'bucketlist successfully deleted'})
 
         
-@app.route("/bucketlists/<int:id>/items", methods=['POST'])
+@app.route("/bucketlists/<int:id>/items/", methods=['POST'])
 @auth.login_required #create item in bucketlist
 def addnew_bucketlistitem(id):
 

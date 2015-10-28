@@ -22,9 +22,7 @@ class APIClientTestCase(unittest.TestCase):
         u.LoggedIn = True
         db.session.add(u)
         db.session.commit()
-        g.user = u
-        
-        
+        g.user = u                
         
     def tearDown(self):
         db.session.remove() 
@@ -39,7 +37,6 @@ class APIClientTestCase(unittest.TestCase):
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
-
 
     def test_auth_login(self):
 
@@ -62,8 +59,6 @@ class APIClientTestCase(unittest.TestCase):
             data=json.dumps(user),
             )
         self.assertEqual(response.status_code, 400, msg='response status should be 400, missing data')
-
-
 
         #test user already exist
         user={'username': 'James','password':'Andela'}
@@ -88,9 +83,6 @@ class APIClientTestCase(unittest.TestCase):
         #import pdb; pdb.set_trace()
 
         self.assertTrue(response.status_code == 401)
-
-
-
 
     def test_token_auth(self):
         # add a user
@@ -295,7 +287,6 @@ class APIClientTestCase(unittest.TestCase):
             headers=self.get_api_headers('James', 'Andela'),
             data=json.dumps({'name': 'RESTful api', 'done': True }))
         self.assertTrue(response.status_code == 400)
-
         #update the wrong list
         response = self.client.put(
             url_for('delete_and_update', id = 2, item_id = 2),
@@ -303,13 +294,11 @@ class APIClientTestCase(unittest.TestCase):
             data=json.dumps({'name': 'RESTful api'}))
         self.assertTrue(response.status_code == 400)
 
-
         #delete the bucketlist item
         response = self.client.delete(
             url_for('delete_and_update', id = 1, item_id = 1),
             headers=self.get_api_headers('James', 'Andela'))
         self.assertTrue(response.status_code == 200)
-
 
     def test_user_logout(self):
 
@@ -333,7 +322,6 @@ class APIClientTestCase(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 400, msg='response status should be 400 user already exist and LoggedIn')
 
-
         #user logs out
         response = self.client.get(
             url_for('logout', username='general'),
@@ -346,9 +334,6 @@ class APIClientTestCase(unittest.TestCase):
             headers=self.get_api_headers('general', 'James'))
         self.assertTrue(response.status_code == 401)
 
-
-
-
         #user logs in again
         user={'username': 'general', 'password': 'James'}
         response = self.client.post(
@@ -357,11 +342,6 @@ class APIClientTestCase(unittest.TestCase):
             data=json.dumps(user),
             )
         self.assertEqual(response.status_code, 201, msg='response status should be 201')
-
-
-
-
-
 
 
 if __name__ == '__main__':
