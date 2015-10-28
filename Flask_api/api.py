@@ -2,7 +2,7 @@
 
 from Flask_api import app, auth, db
 from .models import User, BucketList, Item
-from .errors import not_found, bad_request,  precondition_failed
+from .errors import bad_request, not_allowed,unauthorized
 from sqlalchemy.exc import IntegrityError
 from flask import request, jsonify, g, url_for
 from datetime import datetime
@@ -11,8 +11,8 @@ from datetime import datetime
 
 @app.route('/auth/login', methods=['POST'])
 def new_user():
-    username = request.json.get('username', ' ')
-    password = request.json.get('password', ' ')
+    username = request.json.get('username')
+    password = request.json.get('password')
     if not username  or not password:
         return bad_request('Missing arguments/parameters given')
     if User.query.filter_by(username=username).first() is not None:
@@ -21,20 +21,25 @@ def new_user():
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
-    user = User.query.get(user.id)
-    #user.to_json()
-    token = user.generate_auth_token(3600)
-    return (jsonify({'user': user.to_json(), 'token': token.decode('ascii'), 'duration': 'expires on user logout' }), 201)
-
+    return (jsonify({ 'user':user.to_json(),
+                        'request_token':url_for('request_token'), 
+                        'User':url_for('get_user', username = user.username,  _external =True) }),201)
 #{'Location': url_for('get_user', id = user.id, _external = True)}
 
-@app.route('/auth/token', methods=['POST'])
+@app.route('/auth/token')
 @auth.login_required
 def request_token():
     token = g.user.generate_auth_token()
-    return (jsonify({'token': token.decode('ascii'), 
-                'duration': '3600'}), 201)
+    return jsonify({ 'token': token.decode('ascii')})
 
+@app.route('/user/<username>/')
+@auth.login_required
+def get_user(username):
+    '''Return a user'''
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return unauthorized()
+    return jsonify({'user': user.to_json()})
 
 
 
@@ -95,7 +100,7 @@ def get_delete_putbucketlist(id):
                 filter_by(created_by=g.user.username).\
                 filter_by(id=id).first()
     if not bucketlist:
-            return not_found('bucket list with id:{} was not found' .format(id))
+            return not_allowed('not allowed to view bucketlist{}' .format(id))
 
     page = request.args.get('page', 1, type=int)# get page
     limit = request.args.get('limit', app.config['PERPAGE_MIN_LIMIT'],type = int) #get limit
@@ -156,15 +161,8 @@ def addnew_bucketlistitem(id):
         return bad_request('bucket list with id:{} was not found' .format(id))
 
     json_data = request.get_json()
-    if not json_data:
-        return bad_request('No or incomplete input data provided')
-    
-    name, done = json_data['name'], json_data['done']    
-    if done == 'TRUE' or 'true':        
-        item = Item(name=name, done=True, date_modified=datetime.utcnow())
-    else:
-        item =Item(name=name,done=False, date_modified=datetime.utcnow())
-        
+    name, done = json_data['name'], json_data['done']            
+    item = Item(name=name, done=True, date_modified=datetime.utcnow())
     item.bucketlist_id=bucketlist.id
     db.session.add(item)
     db.session.commit()
@@ -191,15 +189,9 @@ def delete_and_update(id, item_id):
             if item.bucketlist_id == bucketlist.id:
                 json_data = request.get_json()
                 name, done = json_data['name'], json_data['done']
-        
-                if done == 'TRUE' or 'true':        
-                    item.name=name 
-                    item.done=True 
-                    item.date_modified=datetime.utcnow()
-                else:
-                    item.name=name
-                    item.done=False, 
-                    item.date_modified=datetime.utcnow()
+                item.name=name 
+                item.done=done
+                item.date_modified=datetime.utcnow()
 
                 item.bucketlist_id=bucketlist.id
                 db.session.add(item)
@@ -207,8 +199,6 @@ def delete_and_update(id, item_id):
 
                 responseitem = Item.query.get(item.id)
                 return jsonify({'Item':responseitem.to_json()})
-        else:
-            return bad_request('item not related to bucketlist')
 
     if request.method == 'DELETE':
         if item:
