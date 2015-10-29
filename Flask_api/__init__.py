@@ -25,4 +25,4 @@ app.config['PERPAGE_MAX_LIMIT'] = 100
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
-from Flask_api import api, models, errors, authenticate, bucketlistapi, itemapi
+from Flask_api import models, errors, authenticate, bucketlistapi, itemapi
