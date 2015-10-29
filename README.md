@@ -75,7 +75,7 @@ User can choose to log out using ``` GET auth/logout/username``` which invalidat
 Once User is logged out, user will have to login to have access to valid token.  
 If User token is still valid before logout, logging out will invalidate the user token.  
 
-RESTful API is RESTLESS and so no user session is stored.
+RESTful API is STATELESS and so no user session is stored.
 
 ###Other Features  
 User can search for bucketlist using limits and page(pagination via limit)  
