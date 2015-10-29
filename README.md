@@ -93,10 +93,10 @@ Install dependencies using ``` pip install -r requirements.txt ```
 Run ``` python manager.py runserver``` to start server  
 Test Api using ```POSTMAN```  or ``` cURL ```  
 
-####Database Used postgress.  
-set User :Administrator  
-password:administrator  
-database name:bucketlist  
+####Database Used: Postgress.  
+Set User: Administrator  
+Password: administrator  
+Database name: bucketlist  
 
 ######HAVE FUN!!!
 
