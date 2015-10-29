@@ -8,15 +8,24 @@ from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
 from .errors import unauthorized
 
-class User(db.Model):
+class Base(db.Model):
+
+    ''' Abstract Base class used to define datetime and id.'''
+
+    __abstract__ = True
+
+    id = db.Column(db.Integer, primary_key=True)
+    date_created = db.Column(db.DateTime,index=True, default=db.func.current_timestamp())
+    date_modified = db.Column(db.DateTime,index=True, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+
+class User(Base):
 
     '''User table defined for user authenticatin.'''
 
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
     password_hash = db.Column(db.String(128))
-    date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
     LoggedIn = db.Column(db.Boolean, default=True)
     bucket = db.relationship('BucketList', backref='owner', lazy='dynamic')
 
@@ -62,17 +71,14 @@ class User(db.Model):
         return g.user
 
 
-class BucketList(db.Model):
+class BucketList(Base):
 
     '''Bucketlist model defined'''
 
     __tablename__ = 'Bucketlists'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
-    date_created = db.Column(db.DateTime,index=True, default=datetime.now())
-    date_modified = db.Column(db.DateTime,index=True, default=datetime.now())  
-    created_by = db.Column(db.String(64))
+    name = db.Column(db.String(64))  
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_by = db.Column(db.String(64))
     items = db.relationship('Item', backref='bucketlist', cascade="all, delete-orphan",lazy='dynamic')
 
     def to_json(self):
@@ -90,17 +96,13 @@ class BucketList(db.Model):
 
 
 
-class Item(db.Model):
+class Item(Base):
 
     '''Item model defined for api service. '''
 
     __tablename__ = 'items'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
-    date_created = db.Column(db.DateTime,index=True, default=datetime.utcnow())
-    date_modified = db.Column(db.DateTime,index =True, default=datetime.utcnow())   
+    name = db.Column(db.String(64))   
     done = db.Column(db.Boolean, default=False, nullable =False) 
-
     bucketlist_id = db.Column(db.Integer, db.ForeignKey('Bucketlists.id'), nullable=False)
     
 
