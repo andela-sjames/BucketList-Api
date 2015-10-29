@@ -1,4 +1,4 @@
-# BucketList-Api [![Coverage Status](https://coveralls.io/repos/andela-sjames/BucketList-Api/badge.svg?branch=master&service=github)](https://coveralls.io/github/andela-sjames/BucketList-Api?branch=master)
+# BucketList-Api [![Coverage Status](https://coveralls.io/repos/andela-sjames/BucketList-Api/badge.svg?branch=master&service=github)](https://coveralls.io/github/andela-sjames/BucketList-Api?branch=master) [![Build Status](https://travis-ci.org/andela-sjames/BucketList-Api.svg?branch=master)](https://travis-ci.org/andela-sjames/BucketList-Api)
 Python Flask Api Demonstration
 
 
