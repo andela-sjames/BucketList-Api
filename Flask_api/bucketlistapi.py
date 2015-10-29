@@ -1,9 +1,8 @@
-'''Script Used for Api Accesspoint. '''
+'''Script Used for Bucketlist Api Accesspoint. '''
 
 from Flask_api import app, auth, db
-from .models import User, BucketList, Item
-from .errors import bad_request, not_allowed,unauthorized
-from sqlalchemy.exc import IntegrityError
+from .models import BucketList
+from .errors import bad_request, not_allowed
 from flask import request, jsonify, g, url_for
 from datetime import datetime
 
@@ -33,10 +32,14 @@ def create_and_getbucketlist():
         buckets=pagination.items
         prev = None
         if pagination.has_prev:
-            prev = url_for('create_and_getbucketlist', page=page-1,limit = 2, _external=True)
+            prev = url_for('create_and_getbucketlist', 
+                page=page-1,
+                limit = 2, _external=True)
         next = None
         if pagination.has_next:
-            next = url_for('create_and_getbucketlist', page=page+1,limit = limit, _external=True)
+            next = url_for('create_and_getbucketlist', 
+                page=page+1,
+                limit = limit, _external=True)
             
         return jsonify({
             'bucketlist': [bucket.to_json() for bucket in buckets], 
@@ -50,7 +53,8 @@ def create_and_getbucketlist():
         if not json_data['name']:
             return bad_request('No input data provided')
 
-        bucketList = BucketList(name=json_data['name'],created_by=g.user.username, user_id=g.user.id)
+        bucketList = BucketList(name=json_data['name'],
+            created_by=g.user.username, user_id=g.user.id)
         db.session.add(bucketList)
         db.session.commit()
 
@@ -77,14 +81,19 @@ def get_delete_putbucketlist(id):
     if request.method == 'GET':
         if bucketlist:
             itemsquerydataset = bucketlist.items
-            pagination =itemsquerydataset.paginate(page, per_page=limit, error_out=False)
+            pagination =itemsquerydataset.paginate(page, 
+                per_page=limit, error_out=False)
             bucket_items=pagination.items
             prev = None
             if pagination.has_prev:
-                prev = url_for('get_delete_putbucketlist', id = bucketlist.id,page=page-1, limit = limit, _external=True)
+                prev = url_for('get_delete_putbucketlist', 
+                    id = bucketlist.id,page=page-1, 
+                    limit = limit, _external=True)
             next = None
             if pagination.has_next:
-                next = url_for('get_delete_putbucketlist',id = bucketlist.id ,page=page+1, limit = limit, _external=True)
+                next = url_for('get_delete_putbucketlist',
+                    id = bucketlist.id ,page=page+1, 
+                    limit = limit, _external=True)
             
             buckets=bucketlist.to_json()
             buckets['items'] = [ itemsqueryset.to_json() for itemsqueryset in bucket_items ]
@@ -117,67 +126,3 @@ def get_delete_putbucketlist(id):
             return jsonify({'message': 'bucketlist successfully deleted'})
 
         
-@app.route("/bucketlists/<int:id>/items/", methods=['POST'])
-@auth.login_required #create item in bucketlist
-def addnew_bucketlistitem(id):
-
-    ''' create a bucket list item. '''
-
-    bucketlist = BucketList.query.\
-                filter_by(created_by=g.user.username).\
-                filter_by(id=id).first()
-
-    if not bucketlist:
-        return bad_request('bucket list with id:{} was not found' .format(id))
-
-    json_data = request.get_json()
-    name, done = json_data['name'], json_data['done']            
-    item = Item(name=name, done=True, date_modified=datetime.utcnow())
-    item.bucketlist_id=bucketlist.id
-    db.session.add(item)
-    db.session.commit()
-    
-    added_item=Item.query.get(item.id)
-    return jsonify({'Item':added_item.to_json()})
-
-
-@app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
-@auth.login_required
-def delete_and_update(id, item_id):
-
-    '''Delete and update a bucketlist item. '''
-    
-    bucketlist = BucketList.query.\
-                filter_by(created_by=g.user.username).\
-                filter_by(id=id).first()
-    if not bucketlist:
-        return bad_request('bucket list with id:{} was not found' .format(id))
-    
-    item =Item.query.get(item_id)
-    if not item:
-            return bad_request('bucket list with id:{} was not found' .format(item_id))
-
-    if request.method == 'PUT':
-        if item:
-            if item.bucketlist_id == bucketlist.id:
-                json_data = request.get_json()
-                name, done = json_data['name'], json_data['done']
-                item.name=name 
-                item.done=done
-                item.date_modified=datetime.utcnow()
-
-                item.bucketlist_id=bucketlist.id
-                db.session.add(item)
-                db.session.commit()
-
-                responseitem = Item.query.get(item.id)
-                return jsonify({'Item':responseitem.to_json()})
-
-    if request.method == 'DELETE':
-        if item:
-
-            db.session.add(item)
-            db.session.delete(item)
-            db.session.commit()
-
-        return jsonify({'message': 'bucketlist successfully deleted'})
