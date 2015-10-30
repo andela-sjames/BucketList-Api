@@ -13,11 +13,10 @@ def unauthorized(message=None):
         else:
             message = 'Please authenticate.'
     response = jsonify({'status': 401, 'error': 'unauthorized',
-                        'message': message, 
-                        'authentication path':url_for('request_token')})
+                        'message': message})
     response.status_code = 401
     if app.config['SECRET_KEY']:
-        response.headers['Location'] = url_for('request_token')
+        response.headers['Location'] = url_for('new_user')
     return response
 
 def bad_request(message):

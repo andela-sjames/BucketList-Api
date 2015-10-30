@@ -24,11 +24,9 @@ def addnew_bucketlistitem(id):
     name, done = json_data['name'], json_data['done']            
     item = Item(name=name, done=True, date_modified=datetime.utcnow())
     item.bucketlist_id=bucketlist.id
-    db.session.add(item)
-    db.session.commit()
-    
-    added_item=Item.query.get(item.id)
-    return jsonify({'Item':added_item.to_json()})
+    item.save()
+
+    return jsonify({'Item':item.to_json()})
 
 
 @app.route("/bucketlists/<int:id>/items/<int:item_id>", methods=['PUT', 'DELETE'])
@@ -48,26 +46,20 @@ def delete_and_update(id, item_id):
             return bad_request('bucket list with id:{} was not found' .format(item_id))
 
     if request.method == 'PUT':
-        if item:
-            if item.bucketlist_id == bucketlist.id:
-                json_data = request.get_json()
-                name, done = json_data['name'], json_data['done']
-                item.name=name 
-                item.done=done
-                item.date_modified=datetime.utcnow()
 
-                item.bucketlist_id=bucketlist.id
-                db.session.add(item)
-                db.session.commit()
+        if item.bucketlist_id == bucketlist.id:
+            json_data = request.get_json()
+            name, done = json_data['name'], json_data['done']
+            item.name=name 
+            item.done=done
+            item.date_modified=datetime.utcnow()
 
-                responseitem = Item.query.get(item.id)
-                return jsonify({'Item':responseitem.to_json()})
+            item.bucketlist_id=bucketlist.id
+            item.save()
+
+            return jsonify({'Item':item.to_json()})
 
     if request.method == 'DELETE':
-        if item:
-
-            db.session.add(item)
-            db.session.delete(item)
-            db.session.commit()
+        item.delete()
 
         return jsonify({'message': 'bucketlist successfully deleted'})

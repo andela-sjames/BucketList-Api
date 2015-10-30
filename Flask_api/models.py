@@ -18,6 +18,18 @@ class Base(db.Model):
     date_created = db.Column(db.DateTime,index=True, default=db.func.current_timestamp())
     date_modified = db.Column(db.DateTime,index=True, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
+    # saves the data
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    # deletes the data
+    def delete(self):
+        db.session.add(self)
+        db.session.delete(self)
+        db.session.commit()
+
+
 
 class User(Base):
 
@@ -51,7 +63,7 @@ class User(Base):
     def verify_password(self, password):
         return pwd_context.verify(password, self.password_hash)
 
-    def generate_auth_token(self, expiration=36000):
+    def generate_auth_token(self, expiration=86400):
         s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'id': self.id})
 
@@ -123,23 +135,13 @@ class Item(Base):
 def verify_password(username_or_token, password):
     # first try to authenticate by token
     user = User.verify_auth_token(username_or_token)
-    #check if user is loggedIn
-    if user and user.LoggedIn:
-        g.user = user
-        return True
-    elif user and not user.LoggedIn:
-        return False
-    elif not user:
+    if not user:
         # try to authenticate with username/password
         user = User.query.filter_by(username=username_or_token).first()
-        if user and user.LoggedIn:
-            g.user = user
-            return True
-        if user and not user.LoggedIn:
-            return False
         if not user or not user.verify_password(password):
             return False
-
+    g.user = user
+    return True
 
 @auth.error_handler
 def unauthorized_error():

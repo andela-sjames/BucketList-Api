@@ -22,9 +22,7 @@ class APITestCase(unittest.TestCase):
         self.client = app.test_client()
         u = User(username='James')
         u.hash_password('Andela')
-        u.LoggedIn = True
-        db.session.add(u)
-        db.session.commit()
+        u.save()
         g.user = u                
         
     def tearDown(self):
@@ -123,6 +121,7 @@ class ItemsTestCase(APITestCase):
             headers=self.get_api_headers('James', 'Andela'),
             data=json.dumps({'name': 'RESTful api', 'done': True }))
         self.assertTrue(response.status_code == 400)
+
         #update the wrong list
         response = self.client.put(
             url_for('delete_and_update', id = 2, item_id = 2),

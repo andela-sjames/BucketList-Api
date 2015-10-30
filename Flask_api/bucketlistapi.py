@@ -53,13 +53,11 @@ def create_and_getbucketlist():
         if not json_data['name']:
             return bad_request('No input data provided')
 
-        bucketList = BucketList(name=json_data['name'],
+        bucketlist = BucketList(name=json_data['name'],
             created_by=g.user.username, user_id=g.user.id)
-        db.session.add(bucketList)
-        db.session.commit()
+        bucketlist.save()
 
-        bucketid = BucketList.query.get(bucketList.id)
-        return jsonify({'bucketlist':bucketid.to_json()})
+        return jsonify({'bucketlist':bucketlist.to_json()})
         
 
 @app.route("/bucketlists/<int:id>", methods=['GET', 'PUT', 'DELETE'])
@@ -79,50 +77,45 @@ def get_delete_putbucketlist(id):
     limit = limit if limit <= app.config['PERPAGE_MAX_LIMIT'] else app.config['PERPAGE_MAX_LIMIT']
 
     if request.method == 'GET':
-        if bucketlist:
-            itemsquerydataset = bucketlist.items
-            pagination =itemsquerydataset.paginate(page, 
-                per_page=limit, error_out=False)
-            bucket_items=pagination.items
-            prev = None
-            if pagination.has_prev:
-                prev = url_for('get_delete_putbucketlist', 
-                    id = bucketlist.id,page=page-1, 
-                    limit = limit, _external=True)
-            next = None
-            if pagination.has_next:
-                next = url_for('get_delete_putbucketlist',
-                    id = bucketlist.id ,page=page+1, 
-                    limit = limit, _external=True)
-            
-            buckets=bucketlist.to_json()
-            buckets['items'] = [ itemsqueryset.to_json() for itemsqueryset in bucket_items ]
+        
+        itemsquerydataset = bucketlist.items
+        pagination =itemsquerydataset.paginate(page, 
+            per_page=limit, error_out=False)
+        bucket_items=pagination.items
+        prev = None
+        if pagination.has_prev:
+            prev = url_for('get_delete_putbucketlist', 
+                id = bucketlist.id,page=page-1, 
+                limit = limit, _external=True)
+        next = None
+        if pagination.has_next:
+            next = url_for('get_delete_putbucketlist',
+                id = bucketlist.id ,page=page+1, 
+                limit = limit, _external=True)
+        
+        buckets=bucketlist.to_json()
+        buckets['items'] = [ itemsqueryset.to_json() for itemsqueryset in bucket_items ]
 
-            return jsonify({
-                'bucketlist': buckets, 
-                'prev': prev,
-                'next': next,
-                'count': pagination.total
-            })
+        return jsonify({
+            'bucketlist': buckets, 
+            'prev': prev,
+            'next': next,
+            'count': pagination.total
+        })
         
     if request.method == 'PUT':        
         if bucketlist:
             json_data = request.get_json()
             bucketlist.name=json_data['name']
             bucketlist.date_modified=datetime.utcnow()
-            db.session.add(bucketlist)
-            db.session.commit()
-            bucket=BucketList.query.get(id)
+            bucketlist.save()
 
             return jsonify({'bucketlist':bucketlist.to_json()})
         
     if request.method == 'DELETE':
         #dynamicall delete all related items to bucketlist.
-        if bucketlist:
-            db.session.add(bucketlist)
-            db.session.delete(bucketlist)
-            db.session.commit()
+        bucketlist.delete()
 
-            return jsonify({'message': 'bucketlist successfully deleted'})
+        return jsonify({'message': 'bucketlist successfully deleted'})
 
         
