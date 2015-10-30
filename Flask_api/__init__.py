@@ -19,10 +19,8 @@ app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['PERPAGE_MIN_LIMIT'] = 20
 app.config['PERPAGE_MAX_LIMIT'] = 100
 
-#postgresql://Administrator:administrator@localhost/bucketlist
-
 # extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
-from Flask_api import models, errors, authenticate, bucketlistapi, itemapi
+from Flask_api import models, errors, authenticate, bucketlistapi, bucketlistitemapi
