@@ -77,7 +77,7 @@ Default limit without specification is 20 and default page number is 1.
 ```GET /bucketlists/id/limit=5 ``` and ```GET /bucketlists/id/limit=4&page=2```  
 
 User can also search for bucketlist using search parameter q.  
-``` GET /bucketlists/q='my list1'``` and  ``` GET /bucketlists/q='game'&limit=4&page=1```  
+``` GET /bucketlists/q=create ``` and  ``` GET /bucketlists/q='game'&limit=4&page=1```  
 
 
 
