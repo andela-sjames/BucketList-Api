@@ -1,49 +1,12 @@
 import os, json
-import unittest
-from Flask_api import app, db
-from base64 import b64encode 
-from Flask_api.models import BucketList, Item, User
+from Flask_api import db 
+from Flask_api.models import User
 from flask import url_for, g
+from . test_bucketlistitem import APITestCase
 
-basedir = os.path.abspath(os.path.dirname(__file__))
+class APIAuthTestCase(APITestCase):
 
-class APIAuthTestCase(unittest.TestCase):
-
-    def setUp(self):
-
-        '''Instanciate test.'''
-
-        self.app = app
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'test.db')
-        app.config['SERVER_NAME'] = 'localhost'
-        self.app_context = self.app.app_context()
-        self.app_context.push()
-        db.create_all()
-        self.client = app.test_client()
-        u = User(username='James')
-        u.hash_password('Andela')
-        u.LoggedIn = True
-        db.session.add(u)
-        db.session.commit()
-        g.user = u                
-        
-    def tearDown(self):
-
-        '''Teardown testcase'''
-
-        db.session.remove() 
-        db.drop_all() 
-        self.app_context.pop()
-
-    def get_api_headers(self, username, password):
-        return {
-            'Authorization':
-                'Basic ' + b64encode(
-                    (username + ':' + password).encode('utf-8')).decode('utf-8'),
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-
+    '''Class defined to test user authentication.'''
 
     def test_auth_login(self):
 
