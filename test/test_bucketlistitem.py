@@ -7,7 +7,7 @@ from flask import url_for, g
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-class APIItemsTestCase(unittest.TestCase):
+class APITestCase(unittest.TestCase):
 
     def setUp(self):
 
@@ -43,6 +43,8 @@ class APIItemsTestCase(unittest.TestCase):
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
+
+class ItemsTestCase(APITestCase): 
 
     def test_add_bucketitems(self):
 
