@@ -31,7 +31,7 @@ def new_user():
 
 
     if exist.username and exist.verify_password(password):
-        #import pdb; pdb.set_trace()
+        
         token = exist.generate_auth_token()
         return (jsonify({ 'user':exist.to_json(),
                     'token': token.decode('ascii'),
