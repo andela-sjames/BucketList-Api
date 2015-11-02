@@ -38,6 +38,16 @@ class APIAuthTestCase(APITestCase):
             data=json.dumps(user),
             )
         self.assertEqual(response.status_code, 201, msg='response status should be 400 user already exists')
+
+        #test user password validation
+        user={'username': 'James','password':'mandela'}
+        response = self.client.post(
+            '/auth/login',
+            content_type='application/json',
+            data=json.dumps(user),
+            )
+        self.assertEqual(response.status_code, 401, msg='response status should be 400 user already exists')
+
         
         #test user can view self info
         response = self.client.get(

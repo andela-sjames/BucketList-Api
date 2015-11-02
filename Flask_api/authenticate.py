@@ -29,6 +29,8 @@ def new_user():
             'duration': 'expires after 24 hours',
             'User':url_for('get_user', username = user.username,  _external =True) }), 201)
 
+    if exist.username and not exist.verify_password(password):
+        return unauthorized('Incorrect password entered, please confirm')
 
     if exist.username and exist.verify_password(password):
         
