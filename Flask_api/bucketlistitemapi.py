@@ -43,7 +43,7 @@ def delete_and_update(id, item_id):
     
     item =Item.query.get(item_id)
     if not item:
-            return bad_request('bucket list with id:{} was not found' .format(item_id))
+            return bad_request('item with id:{} was not found' .format(item_id))
 
     if request.method == 'PUT':
 
@@ -62,4 +62,4 @@ def delete_and_update(id, item_id):
     if request.method == 'DELETE':
         item.delete()
 
-        return jsonify({'message': 'bucketlist successfully deleted'})
+        return jsonify({'message': 'item successfully deleted'})
