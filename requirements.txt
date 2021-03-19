@@ -10,7 +10,7 @@ Flask-Migrate==1.6.0
 Flask-Script==2.0.5
 Flask-SQLAlchemy==2.0
 itsdangerous==0.24
-Jinja2==2.8
+Jinja2==2.11.3
 Mako==1.0.2
 MarkupSafe==0.23
 passlib==1.6.5
